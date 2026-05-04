@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
 import { db } from '../firebase'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
 import { Link } from 'react-router-dom'
 
 const ETAPAS = ['embarcadoCreado','posicionamiento','carga','transito','descarga','entregado','provisiones','porFacturar','cobrado']
