@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "cp *.png public/ 2>/dev/null; vite build",
     "preview": "vite preview"
   },
   "dependencies": {
