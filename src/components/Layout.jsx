@@ -1,4 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { ISOLOGO, LOGO_COMPLETO } from '../logos'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useAuth } from '../context/AuthContext'
@@ -7,6 +8,7 @@ import { useState } from 'react'
 const NAV = [
   { label: 'Dashboard', icon: '▦', path: '/dashboard', roles: ['admin','ventas','operaciones','pricing'] },
   { label: 'Embarques', icon: '🚛', path: '/embarques', roles: ['admin','ventas','operaciones'] },
+  { label: 'Cotizaciones', icon: '📄', path: '/cotizaciones', roles: ['admin','ventas'] },
   { label: 'Operaciones', icon: '📋', path: '/operaciones', roles: ['admin','operaciones'] },
   { label: 'Pricing', icon: '💲', path: '/pricing', roles: ['admin','pricing'] },
   { divider: true, label: 'Administración', roles: ['admin'] },
@@ -32,8 +34,8 @@ export default function Layout() {
         {/* Logo */}
         <div className="h-14 flex items-center px-3 border-b border-gray-100">
           {collapsed
-            ? <img src="/isologo.png" alt="Log Up" className="w-8 h-8 object-contain mx-auto" />
-            : <img src="/logupcompleto.png" alt="Log Up" className="h-9 object-contain" />
+            ? <img src={ISOLOGO} alt="Log Up" className="w-8 h-8 object-contain mx-auto" />
+            : <img src={LOGO_COMPLETO} alt="Log Up" className="h-9 object-contain" />
           }
         </div>
 
