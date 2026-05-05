@@ -1,33 +1,518 @@
-export default function Pricing() {
+import { useEffect, useState } from 'react'
+import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc } from 'firebase/firestore'
+import { db } from '../../firebase'
+
+const TABS = [
+  { key: 'proveedores', label: 'Proveedores', icon: '🏢' },
+  { key: 'tarifas', label: 'Tarifas por ruta', icon: '🗺️' },
+  { key: 'cotizador', label: 'Cotizador interno', icon: '💲' },
+  { key: 'disponibilidad', label: 'Disponibilidad', icon: '📅' },
+]
+
+const TIPOS_UNIDAD = ['Tráiler', 'Caja seca', 'Caja refrigerada', 'Rabón', 'Tortón', 'Plataforma', 'Pipa']
+const TIPOS_SERVICIO = ['FTL', 'LTL', 'Internacional', 'Refrigerado']
+
+const RUTAS_COMUNES = [
+  'Monterrey - CDMX', 'Monterrey - Guadalajara', 'Monterrey - Laredo',
+  'Monterrey - Saltillo', 'Monterrey - Querétaro', 'Monterrey - Puebla',
+  'CDMX - Guadalajara', 'Saltillo - CDMX', 'Laredo - CDMX',
+]
+
+const DISTANCIAS = {
+  'Monterrey - CDMX': 910, 'Monterrey - Guadalajara': 690, 'Monterrey - Laredo': 240,
+  'Monterrey - Saltillo': 87, 'Monterrey - Querétaro': 750, 'Monterrey - Puebla': 1050,
+  'CDMX - Guadalajara': 540, 'Saltillo - CDMX': 980, 'Laredo - CDMX': 1150,
+}
+
+// DEMO data
+const PROVEEDORES_DEMO = [
+  { id:'p1', nombre:'Transportes Regio Express', contacto:'Carlos Méndez', tel:'81-2233-4455', email:'carlos@regioexpress.mx', unidades:['Tráiler','Caja seca'], rutas:['Monterrey - CDMX','Monterrey - Guadalajara'], calificacion:4.8, activo:true, _demo:true },
+  { id:'p2', nombre:'Fletes del Norte S.A.', contacto:'Ana Rodríguez', tel:'81-5566-7788', email:'ana@fletesnorte.mx', unidades:['Caja refrigerada','Rabón'], rutas:['Monterrey - Laredo','Monterrey - Saltillo'], calificacion:4.5, activo:true, _demo:true },
+  { id:'p3', nombre:'Logística Integral MX', contacto:'Pedro Garza', tel:'81-9900-1122', email:'pedro@logimx.com', unidades:['Tráiler','Plataforma','Tortón'], rutas:['Monterrey - CDMX','CDMX - Guadalajara'], calificacion:4.2, activo:true, _demo:true },
+  { id:'p4', nombre:'Transportes Cruz Roja', contacto:'María Sánchez', tel:'83-3344-5566', email:'maria@cruztrans.mx', unidades:['Caja seca','Rabón'], rutas:['Monterrey - Querétaro','Saltillo - CDMX'], calificacion:3.9, activo:false, _demo:true },
+]
+
+const TARIFAS_DEMO = [
+  { id:'t1', proveedor:'Transportes Regio Express', ruta:'Monterrey - CDMX', tipoUnidad:'Tráiler', tipoServicio:'FTL', tarifa:14500, combustible:18, _demo:true },
+  { id:'t2', proveedor:'Logística Integral MX', ruta:'Monterrey - CDMX', tipoUnidad:'Tráiler', tipoServicio:'FTL', tarifa:13800, combustible:18, _demo:true },
+  { id:'t3', proveedor:'Transportes Regio Express', ruta:'Monterrey - Guadalajara', tipoUnidad:'Tráiler', tipoServicio:'FTL', tarifa:11200, combustible:18, _demo:true },
+  { id:'t4', proveedor:'Fletes del Norte S.A.', ruta:'Monterrey - Laredo', tipoUnidad:'Caja refrigerada', tipoServicio:'Refrigerado', tarifa:8900, combustible:20, _demo:true },
+  { id:'t5', proveedor:'Logística Integral MX', ruta:'CDMX - Guadalajara', tipoUnidad:'Tráiler', tipoServicio:'FTL', tarifa:9500, combustible:18, _demo:true },
+  { id:'t6', proveedor:'Fletes del Norte S.A.', ruta:'Monterrey - Saltillo', tipoUnidad:'Rabón', tipoServicio:'LTL', tarifa:3200, combustible:18, _demo:true },
+]
+
+const fmt = (n) => '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:0})
+
+// ─── PROVEEDORES ──────────────────────────────────────────────────────────────
+function TabProveedores() {
+  const [proveedores, setProveedores] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ nombre:'', contacto:'', tel:'', email:'', unidades:[], rutas:[] })
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { fetchProveedores() }, [])
+
+  const fetchProveedores = async () => {
+    setLoading(true)
+    try {
+      const snap = await getDocs(collection(db, 'proveedores'))
+      const reales = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      setProveedores([...PROVEEDORES_DEMO, ...reales])
+    } catch(e) { setProveedores(PROVEEDORES_DEMO) }
+    finally { setLoading(false) }
+  }
+
+  const guardar = async () => {
+    if(!form.nombre) return
+    setSaving(true)
+    try {
+      await addDoc(collection(db, 'proveedores'), { ...form, calificacion: 5, activo: true, createdAt: serverTimestamp() })
+      setShowForm(false)
+      setForm({ nombre:'', contacto:'', tel:'', email:'', unidades:[], rutas:[] })
+      fetchProveedores()
+    } catch(e) { console.error(e) }
+    finally { setSaving(false) }
+  }
+
+  const set = (k,v) => setForm(f => ({...f, [k]: v}))
+
+  const Stars = ({n}) => (
+    <span className="text-amber-400 text-xs">
+      {'★'.repeat(Math.floor(n))}{'☆'.repeat(5-Math.floor(n))}
+      <span className="text-gray-400 ml-1">{n}</span>
+    </span>
+  )
+
   return (
-    <div className="space-y-4 max-w-2xl">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Pricing</h1>
-        <p className="text-sm text-gray-500">Gestión de tarifas, proveedores y disponibilidad de unidades</p>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-gray-500">{proveedores.length} proveedores registrados</p>
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary text-xs py-1.5">+ Nuevo proveedor</button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { icon: '🏢', title: 'Proveedores', desc: 'Catálogo de transportistas con tarifas por ruta', status: 'Próximamente' },
-          { icon: '🗺️', title: 'Tarifas por ruta', desc: 'Matriz origen-destino con precios FTL/LTL/REF', status: 'Próximamente' },
-          { icon: '📅', title: 'Disponibilidad', desc: 'Tabla de unidades disponibles por día', status: 'Próximamente' },
-        ].map(m => (
-          <div key={m.title} className="card p-5">
-            <div className="text-2xl mb-3">{m.icon}</div>
-            <h2 className="text-sm font-semibold text-gray-800 mb-1">{m.title}</h2>
-            <p className="text-xs text-gray-500 mb-3">{m.desc}</p>
-            <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium">{m.status}</span>
+
+      {showForm && (
+        <div className="card p-5 space-y-3 border-brand border">
+          <p className="text-sm font-semibold text-gray-700">Nuevo proveedor</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="block text-xs text-gray-500 mb-1">Nombre / Razón social *</label><input className="input" value={form.nombre} onChange={e=>set('nombre',e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Contacto</label><input className="input" value={form.contacto} onChange={e=>set('contacto',e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Teléfono</label><input className="input" value={form.tel} onChange={e=>set('tel',e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Email</label><input className="input" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">Tipos de unidad que opera</label>
+            <div className="flex flex-wrap gap-2">
+              {TIPOS_UNIDAD.map(t => (
+                <button key={t} onClick={() => set('unidades', form.unidades.includes(t) ? form.unidades.filter(x=>x!==t) : [...form.unidades, t])}
+                  className={`px-2 py-1 rounded text-xs border transition-colors ${form.unidades.includes(t) ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-600'}`}
+                >{t}</button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowForm(false)} className="btn-secondary text-xs py-1.5">Cancelar</button>
+            <button onClick={guardar} disabled={saving} className="btn-primary text-xs py-1.5">{saving ? 'Guardando...' : 'Guardar'}</button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {loading ? <p className="text-gray-400 text-sm col-span-2">Cargando...</p> : proveedores.map(p => (
+          <div key={p.id} className={`card p-4 ${!p.activo ? 'opacity-60' : ''}`}>
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-800">{p.nombre}</p>
+                  {p._demo && <span className="text-[9px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100">DEMO</span>}
+                  {!p.activo && <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Inactivo</span>}
+                </div>
+                <Stars n={p.calificacion} />
+              </div>
+              <div className="text-right text-xs text-gray-500">
+                <p>{p.contacto}</p>
+                <p>{p.tel}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {(p.unidades||[]).map(u => <span key={u} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{u}</span>)}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {(p.rutas||[]).map(r => <span key={r} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded">📍{r}</span>)}
+            </div>
           </div>
         ))}
       </div>
-      <div className="card p-5 border-brand border-2">
-        <p className="text-sm font-medium text-brand mb-1">¿Qué incluirá este módulo?</p>
-        <ul className="text-xs text-gray-600 space-y-1.5 list-disc list-inside">
-          <li>Alta de proveedores con tarifas diferenciadas por tipo de servicio</li>
-          <li>Generador de demanda: cotización interna para comparar opciones</li>
-          <li>Tabla de unidades disponibles por fecha (para planear capacidad)</li>
-          <li>Integración con el cotizador para calcular margen automáticamente</li>
-        </ul>
+    </div>
+  )
+}
+
+// ─── TARIFAS ──────────────────────────────────────────────────────────────────
+function TabTarifas() {
+  const [tarifas, setTarifas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [filtroRuta, setFiltroRuta] = useState('')
+  const [form, setForm] = useState({ proveedor:'', ruta:'', tipoUnidad:'Tráiler', tipoServicio:'FTL', tarifa:'', combustible:18 })
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { fetchTarifas() }, [])
+
+  const fetchTarifas = async () => {
+    setLoading(true)
+    try {
+      const snap = await getDocs(collection(db, 'tarifas'))
+      const reales = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      setTarifas([...TARIFAS_DEMO, ...reales])
+    } catch(e) { setTarifas(TARIFAS_DEMO) }
+    finally { setLoading(false) }
+  }
+
+  const guardar = async () => {
+    if(!form.proveedor || !form.ruta || !form.tarifa) return
+    setSaving(true)
+    try {
+      await addDoc(collection(db, 'tarifas'), { ...form, tarifa: Number(form.tarifa), createdAt: serverTimestamp() })
+      setShowForm(false)
+      setForm({ proveedor:'', ruta:'', tipoUnidad:'Tráiler', tipoServicio:'FTL', tarifa:'', combustible:18 })
+      fetchTarifas()
+    } catch(e) { console.error(e) }
+    finally { setSaving(false) }
+  }
+
+  const set = (k,v) => setForm(f => ({...f, [k]: v}))
+  const filtradas = filtroRuta ? tarifas.filter(t => t.ruta === filtroRuta) : tarifas
+  const rutasUnicas = [...new Set(tarifas.map(t => t.ruta))]
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <select className="input text-xs py-1.5 w-auto" value={filtroRuta} onChange={e => setFiltroRuta(e.target.value)}>
+            <option value="">Todas las rutas</option>
+            {rutasUnicas.map(r => <option key={r}>{r}</option>)}
+          </select>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary text-xs py-1.5">+ Nueva tarifa</button>
       </div>
+
+      {showForm && (
+        <div className="card p-5 space-y-3 border-brand border">
+          <p className="text-sm font-semibold text-gray-700">Registrar tarifa</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="block text-xs text-gray-500 mb-1">Proveedor *</label><input className="input" placeholder="Nombre del transportista" value={form.proveedor} onChange={e=>set('proveedor',e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Ruta *</label>
+              <select className="input" value={form.ruta} onChange={e=>set('ruta',e.target.value)}>
+                <option value="">Seleccionar...</option>
+                {RUTAS_COMUNES.map(r => <option key={r}>{r}</option>)}
+              </select>
+            </div>
+            <div><label className="block text-xs text-gray-500 mb-1">Tipo de unidad</label>
+              <select className="input" value={form.tipoUnidad} onChange={e=>set('tipoUnidad',e.target.value)}>
+                {TIPOS_UNIDAD.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div><label className="block text-xs text-gray-500 mb-1">Tipo de servicio</label>
+              <select className="input" value={form.tipoServicio} onChange={e=>set('tipoServicio',e.target.value)}>
+                {TIPOS_SERVICIO.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div><label className="block text-xs text-gray-500 mb-1">Tarifa base (MXN) *</label><input type="number" className="input" placeholder="0.00" value={form.tarifa} onChange={e=>set('tarifa',e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Surcharge combustible (%)</label><input type="number" className="input" value={form.combustible} onChange={e=>set('combustible',e.target.value)} /></div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowForm(false)} className="btn-secondary text-xs py-1.5">Cancelar</button>
+            <button onClick={guardar} disabled={saving} className="btn-primary text-xs py-1.5">{saving ? 'Guardando...' : 'Guardar tarifa'}</button>
+          </div>
+        </div>
+      )}
+
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+            <tr>
+              {['Proveedor','Ruta','Unidad','Servicio','Tarifa base','+ Combustible','Total'].map(h => (
+                <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {loading ? (
+              <tr><td colSpan={7} className="text-center py-8 text-gray-400">Cargando...</td></tr>
+            ) : filtradas.length === 0 ? (
+              <tr><td colSpan={7} className="text-center py-8 text-gray-400">Sin tarifas para esta ruta.</td></tr>
+            ) : filtradas.map(t => {
+              const comb = t.tarifa * (t.combustible/100)
+              const total = t.tarifa + comb
+              return (
+                <tr key={t.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-gray-800 text-xs">
+                    {t.proveedor}
+                    {t._demo && <span className="ml-1 text-[9px] bg-amber-50 text-amber-600 px-1 rounded">DEMO</span>}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{t.ruta}</td>
+                  <td className="px-4 py-3"><span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{t.tipoUnidad}</span></td>
+                  <td className="px-4 py-3"><span className="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded">{t.tipoServicio}</span></td>
+                  <td className="px-4 py-3 text-xs font-medium text-gray-700">{fmt(t.tarifa)}</td>
+                  <td className="px-4 py-3 text-xs text-amber-600">+{fmt(comb)} ({t.combustible}%)</td>
+                  <td className="px-4 py-3 text-xs font-bold text-brand">{fmt(total)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ─── COTIZADOR INTERNO ────────────────────────────────────────────────────────
+function TabCotizador() {
+  const [form, setForm] = useState({ ruta:'', tipoUnidad:'Tráiler', tipoServicio:'FTL', peso:'', pallets:'', margen:25, urgente:false })
+  const [resultado, setResultado] = useState(null)
+  const [tarifas, setTarifas] = useState(TARIFAS_DEMO)
+
+  useEffect(() => {
+    getDocs(collection(db, 'tarifas')).then(snap => {
+      const reales = snap.docs.map(d => ({id:d.id,...d.data()}))
+      setTarifas([...TARIFAS_DEMO, ...reales])
+    }).catch(() => {})
+  }, [])
+
+  const set = (k,v) => setForm(f => ({...f, [k]: v}))
+
+  const cotizar = () => {
+    const opciones = tarifas.filter(t =>
+      t.ruta === form.ruta &&
+      t.tipoUnidad === form.tipoUnidad &&
+      t.tipoServicio === form.tipoServicio
+    )
+    if(opciones.length === 0) { setResultado({ error: 'No hay tarifas registradas para esta combinación.' }); return }
+
+    const resultados = opciones.map(t => {
+      const comb = t.tarifa * (t.combustible/100)
+      let costoBase = t.tarifa + comb
+      if(form.urgente) costoBase *= 1.15
+      const margen = costoBase * (form.margen/100)
+      const precioCliente = costoBase + margen
+      const distancia = DISTANCIAS[form.ruta] || 800
+      return { proveedor: t.proveedor, costoBase, margen, precioCliente, distancia, _demo: t._demo }
+    }).sort((a,b) => a.costoBase - b.costoBase)
+
+    setResultado({ opciones: resultados, ruta: form.ruta, margen: form.margen })
+  }
+
+  return (
+    <div className="space-y-4 max-w-2xl">
+      <div className="card p-5 space-y-4">
+        <p className="text-sm font-semibold text-gray-700">Parámetros de cotización</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">Ruta *</label>
+            <select className="input" value={form.ruta} onChange={e=>set('ruta',e.target.value)}>
+              <option value="">Seleccionar ruta...</option>
+              {RUTAS_COMUNES.map(r => <option key={r}>{r}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Tipo de unidad</label>
+            <select className="input" value={form.tipoUnidad} onChange={e=>set('tipoUnidad',e.target.value)}>
+              {TIPOS_UNIDAD.map(t => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Tipo de servicio</label>
+            <select className="input" value={form.tipoServicio} onChange={e=>set('tipoServicio',e.target.value)}>
+              {TIPOS_SERVICIO.map(t => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Margen de ganancia (%)</label>
+            <input type="number" className="input" value={form.margen} onChange={e=>set('margen',Number(e.target.value))} />
+          </div>
+          <div className="flex items-end pb-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={form.urgente} onChange={e=>set('urgente',e.target.checked)} className="w-4 h-4 accent-brand" />
+              <span className="text-xs text-gray-600">🔴 Servicio urgente (+15%)</span>
+            </label>
+          </div>
+        </div>
+        <button onClick={cotizar} disabled={!form.ruta} className="btn-primary w-full justify-center disabled:opacity-40">
+          Generar cotización
+        </button>
+      </div>
+
+      {resultado && (
+        resultado.error ? (
+          <div className="card p-4 bg-amber-50 border-amber-200 border">
+            <p className="text-sm text-amber-700">{resultado.error}</p>
+            <p className="text-xs text-amber-500 mt-1">Agrega tarifas en la pestaña "Tarifas por ruta" para esta combinación.</p>
+          </div>
+        ) : (
+          <div className="card p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-700">Opciones para {resultado.ruta}</p>
+              <span className="text-xs text-gray-400">Margen: {resultado.margen}%</span>
+            </div>
+            {resultado.opciones.map((o, i) => (
+              <div key={i} className={`rounded-xl p-4 border-2 ${i===0?'border-brand bg-blue-50':'border-gray-100'}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      {i===0 && <span className="text-[10px] bg-brand text-white px-2 py-0.5 rounded-full font-medium">⭐ Mejor precio</span>}
+                      {o._demo && <span className="text-[9px] bg-amber-50 text-amber-600 px-1 rounded border border-amber-100">DEMO</span>}
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800 mt-1">{o.proveedor}</p>
+                    <p className="text-[10px] text-gray-400">{o.distancia} km · ~{Math.ceil(o.distancia/65)+1}h factor trailer</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center bg-white rounded-lg p-2 border border-gray-100">
+                    <p className="text-[10px] text-gray-400 mb-0.5">Costo proveedor</p>
+                    <p className="text-sm font-bold text-gray-700">{fmt(o.costoBase)}</p>
+                  </div>
+                  <div className="text-center bg-white rounded-lg p-2 border border-gray-100">
+                    <p className="text-[10px] text-gray-400 mb-0.5">Tu margen</p>
+                    <p className="text-sm font-bold text-green-600">+{fmt(o.margen)}</p>
+                  </div>
+                  <div className={`text-center rounded-lg p-2 border ${i===0?'bg-brand border-brand':'bg-gray-50 border-gray-200'}`}>
+                    <p className={`text-[10px] mb-0.5 ${i===0?'text-blue-100':'text-gray-400'}`}>Precio al cliente</p>
+                    <p className={`text-sm font-bold ${i===0?'text-white':'text-brand'}`}>{fmt(o.precioCliente)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+    </div>
+  )
+}
+
+// ─── DISPONIBILIDAD ───────────────────────────────────────────────────────────
+function TabDisponibilidad() {
+  const [semana, setSemana] = useState(0)
+  const today = new Date()
+
+  const getDias = () => {
+    const dias = []
+    for(let i=0; i<7; i++) {
+      const d = new Date(today)
+      d.setDate(today.getDate() + semana*7 + i)
+      dias.push(d)
+    }
+    return dias
+  }
+
+  const dias = getDias()
+
+  // Demo: disponibilidad ficticia por día
+  const disponibilidadDemo = {
+    'Tráiler': [3,2,4,1,3,2,0],
+    'Caja seca': [2,3,2,3,2,1,2],
+    'Caja refrigerada': [1,1,0,2,1,1,0],
+    'Rabón': [4,3,4,2,3,4,2],
+    'Tortón': [2,2,1,3,2,1,2],
+  }
+
+  const colorDisp = (n) => {
+    if(n===0) return 'bg-red-100 text-red-600'
+    if(n<=1) return 'bg-amber-100 text-amber-600'
+    return 'bg-green-100 text-green-600'
+  }
+
+  const diasSemana = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setSemana(s => s-1)} className="btn-secondary py-1 px-3 text-xs">← Anterior</button>
+          <span className="text-sm font-medium text-gray-700">
+            {dias[0].toLocaleDateString('es-MX',{day:'numeric',month:'short'})} — {dias[6].toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'})}
+          </span>
+          <button onClick={() => setSemana(s => s+1)} className="btn-secondary py-1 px-3 text-xs">Siguiente →</button>
+        </div>
+        <button onClick={() => setSemana(0)} className="text-xs text-brand hover:underline">Hoy</button>
+      </div>
+
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium w-36">Tipo de unidad</th>
+              {dias.map((d, i) => (
+                <th key={i} className={`px-3 py-3 text-center text-xs font-medium ${d.toDateString()===today.toDateString()?'text-brand':'text-gray-500'}`}>
+                  <div>{diasSemana[i]}</div>
+                  <div className={`text-sm font-bold ${d.toDateString()===today.toDateString()?'text-brand':'text-gray-700'}`}>
+                    {d.getDate()}
+                  </div>
+                </th>
+              ))}
+              <th className="px-3 py-3 text-xs text-gray-500 font-medium">Total sem.</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {Object.entries(disponibilidadDemo).map(([tipo, valores]) => (
+              <tr key={tipo} className="hover:bg-gray-50">
+                <td className="px-4 py-3">
+                  <span className="text-xs font-medium text-gray-700">{tipo}</span>
+                </td>
+                {valores.map((v, i) => (
+                  <td key={i} className="px-3 py-3 text-center">
+                    <span className={`inline-block w-8 h-8 rounded-lg text-xs font-bold leading-8 ${colorDisp(v)}`}>
+                      {v}
+                    </span>
+                  </td>
+                ))}
+                <td className="px-3 py-3 text-center">
+                  <span className="text-xs font-bold text-gray-600">{valores.reduce((a,b)=>a+b,0)}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-4 text-xs text-gray-500">
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-100 inline-block"/>2+ unidades disponibles</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 inline-block"/>1 unidad disponible</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 inline-block"/>Sin disponibilidad</span>
+          <span className="ml-auto text-gray-400 italic">Datos demo — conectar con flota real próximamente</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── MAIN ──────────────────────────────────────────────────────────────────────
+export default function Pricing() {
+  const [tab, setTab] = useState('proveedores')
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-semibold text-gray-900">Pricing</h1>
+        <p className="text-sm text-gray-500">Gestión de tarifas, proveedores y disponibilidad</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+        {TABS.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+              tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span>{t.icon}</span> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'proveedores' && <TabProveedores />}
+      {tab === 'tarifas' && <TabTarifas />}
+      {tab === 'cotizador' && <TabCotizador />}
+      {tab === 'disponibilidad' && <TabDisponibilidad />}
     </div>
   )
 }
