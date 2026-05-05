@@ -1,6 +1,4 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import logoCompleto from '../../public/logupcompleto.png'
-import isologo from '../../public/isologo.png'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useAuth } from '../context/AuthContext'
@@ -34,8 +32,8 @@ export default function Layout() {
         {/* Logo */}
         <div className="h-14 flex items-center px-3 border-b border-gray-100">
           {collapsed
-            ? <img src={isologo} alt="Log Up" className="w-8 h-8 object-contain mx-auto" />
-            : <img src={logoCompleto} alt="Log Up" className="h-9 object-contain" />
+            ? <img src="/isologo.png" alt="Log Up" className="w-8 h-8 object-contain mx-auto" />
+            : <img src="/logupcompleto.png" alt="Log Up" className="h-9 object-contain" />
           }
         </div>
 
