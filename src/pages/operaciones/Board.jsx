@@ -1,3 +1,4 @@
+import html2canvas from 'html2canvas'
 import { useEffect, useState } from 'react'
 import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -240,8 +241,8 @@ ${em.observaciones?`<div class="alert-box" style="margin-bottom:16px;"><div styl
 }
 
 
-// Genera la Hoja de Viaje para el proveedor/monitoreo
-function generarHojaViaje(em, extras = {}) {
+// Genera la Hoja de Viaje como PNG descargable
+async function generarHojaViajePNG(em, extras = {}, setGenerando) {
   const {
     economicoC = em.economicoC || '',
     placasCaja = em.op_placas || '',
@@ -345,9 +346,38 @@ function generarHojaViaje(em, extras = {}) {
 <script>window.onload=()=>window.print()</script>
 </body></html>`
 
-  const ventana = window.open('', '_blank', 'width=800,height=700')
-  ventana.document.write(html)
-  ventana.document.close()
+  // Crear div oculto para renderizar
+  if (setGenerando) setGenerando(true)
+  
+  const div = document.createElement('div')
+  div.style.cssText = 'position:fixed;left:-9999px;top:0;width:700px;background:white;'
+  div.innerHTML = html.replace('<script>window.onload=()=>window.print()</script>', '')
+  document.body.appendChild(div)
+
+  // Esperar a que cargue el logo
+  await new Promise(r => setTimeout(r, 500))
+
+  try {
+    const canvas = await html2canvas(div, { 
+      scale: 2, 
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      width: 700,
+    })
+    const link = document.createElement('a')
+    link.download = `HojaViaje_${extras.numViaje || em.folio || 'viaje'}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  } catch(e) {
+    console.error('html2canvas error:', e)
+    // Fallback: abrir ventana de impresión
+    const ventana = window.open('', '_blank', 'width=800,height=700')
+    ventana.document.write(html)
+    ventana.document.close()
+  } finally {
+    document.body.removeChild(div)
+    if (setGenerando) setGenerando(false)
+  }
 }
 
 // Panel lateral de detalle
@@ -385,6 +415,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
     numViaje: em.folio||'',
   })
   const setH = (k,v) => setHojaData(d=>({...d,[k]:v}))
+  const [generandoPNG, setGenerandoPNG] = useState(false)
   const s_eta = semETA(em.fechaETA)
   const s_etapa = semEtapa(em.etapa, em.etapaEntradaAt, em.horasLibresCarga, em.horasLibresDescarga, em.distanciaKm)
   const etaTransito = em.etapa==='transito'&&em.distanciaKm ? calcETA(em.distanciaKm) : null
@@ -649,10 +680,11 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
                 Cancelar
               </button>
               <button
-                onClick={()=>{ generarHojaViaje(em, hojaData); }}
-                className="flex-1 bg-[#1a3672] text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-900 transition-colors"
+                onClick={()=>{ generarHojaViajePNG(em, hojaData, setGenerandoPNG); }}
+                disabled={generandoPNG}
+                className="flex-1 bg-[#1a3672] text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-900 transition-colors disabled:opacity-60"
               >
-                🖨️ Imprimir Hoja de Viaje
+                {generandoPNG ? '⏳ Generando...' : '📥 Descargar PNG'}
               </button>
             </div>
           </div>
