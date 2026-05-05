@@ -30,16 +30,11 @@ export default function Layout() {
       {/* Sidebar */}
       <aside className={`${collapsed ? 'w-16' : 'w-56'} bg-white border-r border-gray-100 flex flex-col transition-all duration-200 shrink-0`}>
         {/* Logo */}
-        <div className="h-14 flex items-center px-4 border-b border-gray-100 gap-3">
-          <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-white text-xs font-bold">SOL</span>
-          </div>
-          {!collapsed && (
-            <div>
-              <p className="text-sm font-semibold text-gray-900 leading-tight">Log Up</p>
-              <p className="text-[10px] text-gray-400">Sistema Operativo Logístico</p>
-            </div>
-          )}
+        <div className="h-14 flex items-center px-3 border-b border-gray-100">
+          {collapsed
+            ? <img src="/isologo.png" alt="Log Up" className="w-8 h-8 object-contain mx-auto" />
+            : <img src="/logupcompleto.png" alt="Log Up" className="h-9 object-contain" />
+          }
         </div>
 
         {/* Nav */}
