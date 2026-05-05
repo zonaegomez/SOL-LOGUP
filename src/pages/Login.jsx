@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import logoCompleto from '../../public/logupcompleto.png'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useNavigate } from 'react-router-dom'
@@ -30,7 +29,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src={logoCompleto} alt="Log Up" className="h-16 object-contain mx-auto mb-4" />
+          <img src="/logupcompleto.png" alt="Log Up" className="h-16 object-contain mx-auto mb-4" />
           <h1 className="text-xl font-semibold text-gray-900">Sistema Operativo Logístico</h1>
           <p className="text-sm text-gray-500 mt-1">Acceso al sistema</p>
         </div>
