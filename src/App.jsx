@@ -11,6 +11,7 @@ import Usuarios from './pages/admin/Usuarios'
 import Catalogos from './pages/admin/Catalogos'
 import Board from './pages/operaciones/Board'
 import Pricing from './pages/pricing/Pricing'
+import Cotizaciones from './pages/ventas/Cotizaciones'
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="/embarques" element={<Embarques />} />
               <Route path="/embarques/nuevo" element={<NuevoEmbarque />} />
               <Route path="/embarques/:id" element={<DetalleEmbarque />} />
+              <Route path="/cotizaciones" element={<Cotizaciones />} />
               <Route path="/operaciones" element={<Board />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/admin/usuarios" element={<Usuarios />} />
