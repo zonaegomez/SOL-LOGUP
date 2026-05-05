@@ -239,13 +239,152 @@ ${em.observaciones?`<div class="alert-box" style="margin-bottom:16px;"><div styl
   ventana.document.close()
 }
 
+
+// Genera la Hoja de Viaje para el proveedor/monitoreo
+function generarHojaViaje(em, extras = {}) {
+  const {
+    economicoC = em.economicoC || '',
+    placasCaja = em.op_placas || '',
+    economicoT = em.economicoT || '',
+    placasTractor = em.placasTractor || '',
+    operador = em.op_nombre || '',
+    telOperador = em.op_tel || '',
+    fechaCarga = em.fechaCarga ? new Date(em.fechaCarga).toLocaleDateString('es-MX') : '',
+    horaCarga = em.fechaCarga ? new Date(em.fechaCarga).toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'}) : '',
+    fechaDescarga = em.fechaETA ? new Date(em.fechaETA).toLocaleDateString('es-MX') : '',
+    horaDescarga = em.fechaETA ? new Date(em.fechaETA).toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'}) : '',
+    origen = em.origenNombre || '',
+    destino = em.destinoNombre || '',
+    lugarCarga = em.lugarCarga || '',
+    escala = em.escala || '0',
+    lugarDescarga = em.lugarDescarga || '',
+    cliente = em.cliente || '',
+    tipo = UNIDAD_LABEL[em.op_tipoUnidad] || em.op_tipoUnidad || '',
+    temperatura = em.cp_temp || '',
+    tarifa = em.costo_flete ? '$' + Number(em.costo_flete).toLocaleString('es-MX') + '.00' : '',
+    maniobras = em.maniobras || '$0.00',
+    referencia = em.referencia || '',
+    proveedor = em.proveedor_nombre || '',
+    comentarios = em.observaciones || '',
+    numViaje = em.folio || '',
+  } = extras
+
+  const logoBase64 = typeof LOGO_COMPLETO !== 'undefined' ? LOGO_COMPLETO : ''
+
+  const row = (label, value, bold = false) => `
+    <tr>
+      <td style="background:#f0f4ff;font-weight:600;color:#1a3672;border:1px solid #b0bec5;padding:5px 8px;font-size:10px;width:45%">${label}</td>
+      <td style="border:1px solid #b0bec5;padding:5px 8px;font-size:10px;${bold?'font-weight:700;font-size:12px;':''}width:55%">${value || ''}</td>
+    </tr>`
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Hoja de Viaje ${numViaje}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 10px; color: #1a1a1a; padding: 24px; max-width: 700px; margin: 0 auto; }
+  table { width:100%; border-collapse:collapse; }
+  .header-table td { padding: 8px; vertical-align: middle; }
+  @media print { body { padding: 12px; } }
+</style>
+</head>
+<body>
+
+<!-- Header igual al formato Log Up -->
+<table class="header-table" style="border:2px solid #1a3672;margin-bottom:0;">
+  <tr>
+    <td style="width:40%;border-right:2px solid #1a3672;text-align:center;padding:12px;">
+      ${logoBase64
+        ? `<img src="${logoBase64}" style="height:50px;object-fit:contain;" />`
+        : `<div style="font-size:20px;font-weight:900;color:#1a3672;">LOG<span style="color:#333">UP</span></div><div style="font-size:8px;color:#666;letter-spacing:1px;">LOGÍSTICA Y SERVICIOS</div>`
+      }
+    </td>
+    <td style="text-align:center;padding:12px;">
+      <div style="font-size:13px;font-weight:700;color:#333;">${proveedor || 'PROVEEDOR'}</div>
+    </td>
+  </tr>
+</table>
+
+<!-- Número de viaje -->
+<table style="border:2px solid #1a3672;border-top:none;margin-bottom:0;">
+  <tr>
+    <td style="width:40%;border-right:2px solid #1a3672;background:#f0f4ff;font-weight:700;color:#1a3672;padding:8px;font-size:11px;text-align:center;">VIAJE:</td>
+    <td style="padding:8px;text-align:center;font-weight:900;font-size:22px;color:#1a1a1a;">${numViaje}</td>
+  </tr>
+</table>
+
+<!-- Datos del viaje -->
+<table style="border:2px solid #1a3672;border-top:none;">
+  ${row('ECONOMICO CAJA', economicoC)}
+  ${row('PLACAS CAJA', placasCaja)}
+  ${row('ECONOMICO TRACTO', economicoT)}
+  ${row('PLACAS TRACTO', placasTractor)}
+  ${row('NOMBRE OPERADOR', operador)}
+  ${row('TELEFONO OPERADOR', telOperador)}
+  ${row('FECHA DE CARGA', fechaCarga)}
+  ${row('HORA DE CARGA', horaCarga)}
+  ${row('FECHA DE DESCARGA', fechaDescarga)}
+  ${row('HORA DE DESCARGA', horaDescarga)}
+  ${row('ORIGEN', origen)}
+  ${row('DESTINO', destino)}
+  ${row('LUGAR DE CARGA', lugarCarga)}
+  ${row('ESCALA', escala)}
+  ${row('LUGAR DE DESCARGA', lugarDescarga)}
+  ${row('CLIENTE', cliente)}
+  ${row('TIPO', tipo)}
+  ${row('TEMPERATURA GRADOS FARENH', temperatura)}
+  ${row('TARIFA', tarifa)}
+  ${row('MANIOBRAS', maniobras)}
+  ${row('REFERENCIA', referencia)}
+  ${row('PROVEEDOR', proveedor)}
+  ${row('COMENTARIOS', comentarios)}
+</table>
+
+<script>window.onload=()=>window.print()</script>
+</body></html>`
+
+  const ventana = window.open('', '_blank', 'width=800,height=700')
+  ventana.document.write(html)
+  ventana.document.close()
+}
+
 // Panel lateral de detalle
 function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
   const [tabActivo, setTabActivo] = useState('info')
   const [showCambioEtapa, setShowCambioEtapa] = useState(false)
+  const [showHojaViaje, setShowHojaViaje] = useState(false)
   const [etapaSeleccionada, setEtapaSeleccionada] = useState(em.etapa)
   const [motivoCambio, setMotivoCambio] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [hojaData, setHojaData] = useState({
+    economicoC: em.economicoC||'',
+    placasCaja: em.op_placas||'',
+    economicoT: em.economicoT||'',
+    placasTractor: em.placasTractor||em.op_placas||'',
+    operador: em.op_nombre||'',
+    telOperador: em.op_tel||'',
+    fechaCarga: em.fechaCarga ? new Date(em.fechaCarga).toLocaleDateString('es-MX') : '',
+    horaCarga: em.fechaCarga ? new Date(em.fechaCarga).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '',
+    fechaDescarga: em.fechaETA ? new Date(em.fechaETA).toLocaleDateString('es-MX') : '',
+    horaDescarga: em.fechaETA ? new Date(em.fechaETA).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '',
+    origen: em.origenNombre||'',
+    destino: em.destinoNombre||'',
+    lugarCarga: em.lugarCarga||'',
+    escala: em.escala||'0',
+    lugarDescarga: em.lugarDescarga||'',
+    cliente: em.cliente||'',
+    tipo: em.op_tipoUnidad||'',
+    temperatura: em.cp_temp||'',
+    tarifa: em.costo_flete ? '$'+Number(em.costo_flete).toLocaleString('es-MX')+'.00' : '',
+    maniobras: em.maniobras||'$0.00',
+    referencia: em.referencia||'',
+    proveedor: em.proveedor_nombre||'',
+    comentarios: em.observaciones||'PRESENTARSE A CARGA A NOMBRE DE LOG-UP',
+    numViaje: em.folio||'',
+  })
+  const setH = (k,v) => setHojaData(d=>({...d,[k]:v}))
   const s_eta = semETA(em.fechaETA)
   const s_etapa = semEtapa(em.etapa, em.etapaEntradaAt, em.horasLibresCarga, em.horasLibresDescarga, em.distanciaKm)
   const etaTransito = em.etapa==='transito'&&em.distanciaKm ? calcETA(em.distanciaKm) : null
@@ -458,6 +597,67 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
           )}
         </div>
 
+        {/* Modal Hoja de Viaje editable */}
+        {showHojaViaje && (
+          <div className="absolute inset-0 bg-white z-10 flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Hoja de Viaje</p>
+                <p className="text-xs text-gray-400">{em.folio} · Edita antes de imprimir</p>
+              </div>
+              <button onClick={()=>setShowHojaViaje(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {[
+                ['Número de viaje','numViaje'],
+                ['Proveedor (transportista)','proveedor'],
+                ['Económico caja','economicoC'],
+                ['Placas caja','placasCaja'],
+                ['Económico tracto','economicoT'],
+                ['Placas tracto','placasTractor'],
+                ['Nombre operador','operador'],
+                ['Teléfono operador','telOperador'],
+                ['Fecha de carga','fechaCarga'],
+                ['Hora de carga','horaCarga'],
+                ['Fecha de descarga','fechaDescarga'],
+                ['Hora de descarga','horaDescarga'],
+                ['Origen','origen'],
+                ['Destino','destino'],
+                ['Lugar de carga','lugarCarga'],
+                ['Escala','escala'],
+                ['Lugar de descarga','lugarDescarga'],
+                ['Cliente','cliente'],
+                ['Tipo de unidad','tipo'],
+                ['Temperatura (°F)','temperatura'],
+                ['Tarifa','tarifa'],
+                ['Maniobras','maniobras'],
+                ['Referencia','referencia'],
+                ['Comentarios','comentarios'],
+              ].map(([label, key]) => (
+                <div key={key} className="flex items-center gap-3">
+                  <span className="text-xs text-gray-500 w-36 shrink-0">{label}</span>
+                  <input
+                    className="input flex-1 text-xs py-1.5"
+                    value={hojaData[key]}
+                    onChange={e=>setH(key, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex gap-2 shrink-0">
+              <button onClick={()=>setShowHojaViaje(false)} className="flex-1 bg-gray-100 text-gray-700 text-xs font-medium py-2.5 rounded-lg hover:bg-gray-200">
+                Cancelar
+              </button>
+              <button
+                onClick={()=>{ generarHojaViaje(em, hojaData); }}
+                className="flex-1 bg-[#1a3672] text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-900 transition-colors"
+              >
+                🖨️ Imprimir Hoja de Viaje
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Modal cambio manual de etapa */}
         {showCambioEtapa && (
           <div className="absolute inset-0 bg-white z-10 flex flex-col">
@@ -538,7 +738,13 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
             onClick={()=>generarCartaPDF(em)}
             className="flex-1 bg-brand text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
           >
-            📄 CARTA DE INSTRUCCIONES
+            📄 CARTA
+          </button>
+          <button
+            onClick={()=>setShowHojaViaje(true)}
+            className="flex-1 bg-[#1a3672] text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-900 transition-colors flex items-center justify-center gap-1"
+          >
+            🚛 HOJA DE VIAJE
           </button>
           <button
               onClick={() => setShowCambioEtapa(true)}
