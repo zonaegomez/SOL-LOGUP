@@ -390,95 +390,229 @@ function TabCotizador() {
 }
 
 // ─── DISPONIBILIDAD ───────────────────────────────────────────────────────────
-function TabDisponibilidad() {
-  const [semana, setSemana] = useState(0)
-  const today = new Date()
+const UNIDADES_DEMO = [
+  { id:'u1', proveedor:'Transportes Regio Express', origen:'MTY', destino:'CDMX/MTY', tipoUnidad:'Termo conge/Seco', tarifa:14500, disponible:'Hoy', contacto:'Carlos Méndez', tel:'81-2233-4455', _demo:true },
+  { id:'u2', proveedor:'Fletes del Norte S.A.', origen:'CDMX', destino:'CDMX/MTY', tipoUnidad:'Termo conge/Seco', tarifa:13200, disponible:'Hoy', contacto:'Ana Rodríguez', tel:'81-5566-7788', _demo:true },
+  { id:'u3', proveedor:'Logística Integral MX', origen:'LEON, GTO', destino:'MTY/CDMX/PUEBLA', tipoUnidad:'Termo conge/Seco', tarifa:15800, disponible:'Hoy', contacto:'Pedro Garza', tel:'81-9900-1122', _demo:true },
+  { id:'u4', proveedor:'Transportes Regio Express', origen:'MTY', destino:'CDMX/GDL', tipoUnidad:'Termo conge/Seco', tarifa:13900, disponible:'Hoy', contacto:'Carlos Méndez', tel:'81-2233-4455', _demo:true },
+  { id:'u5', proveedor:'Fletes del Norte S.A.', origen:'CDMX', destino:'HERMOSILLO/CDMX/OBREGON', tipoUnidad:'Termo conge/Seco', tarifa:18500, disponible:'Hoy', contacto:'Ana Rodríguez', tel:'81-5566-7788', _demo:true },
+  { id:'u6', proveedor:'Logística Integral MX', origen:'MTY', destino:'ALTAMIRA', tipoUnidad:'Caja seca', tarifa:9800, disponible:'Hoy', contacto:'Pedro Garza', tel:'81-9900-1122', _demo:true },
+  { id:'u7', proveedor:'Transportes Cruz Roja', origen:'ALTAMIRA', destino:'MTY', tipoUnidad:'Caja seca', tarifa:9500, disponible:'Hoy', contacto:'María Sánchez', tel:'83-3344-5566', _demo:true },
+  { id:'u8', proveedor:'Logística Integral MX', origen:'GDL', destino:'CDMX', tipoUnidad:'Tráiler', tarifa:9200, disponible:'Hoy', contacto:'Pedro Garza', tel:'81-9900-1122', _demo:true },
+  { id:'u9', proveedor:'Fletes del Norte S.A.', origen:'MCALLEN', destino:'MTY', tipoUnidad:'Termo conge/Seco', tarifa:8900, disponible:'Hoy', contacto:'Ana Rodríguez', tel:'81-5566-7788', _demo:true },
+]
 
-  const getDias = () => {
-    const dias = []
-    for(let i=0; i<7; i++) {
-      const d = new Date(today)
-      d.setDate(today.getDate() + semana*7 + i)
-      dias.push(d)
-    }
-    return dias
+function TabDisponibilidad({ rol }) {
+  const [unidades, setUnidades] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [solicitudes, setSolicitudes] = useState([])
+  const [modalSolicitud, setModalSolicitud] = useState(null)
+  const [notaMensaje, setNotaMensaje] = useState('')
+  const [form, setForm] = useState({ proveedor:'', origen:'', destino:'', tipoUnidad:'Tráiler', tarifa:'', contacto:'', tel:'', disponible:'Hoy' })
+  const [saving, setSaving] = useState(false)
+  const [filtro, setFiltro] = useState('')
+
+  useEffect(() => { fetchUnidades(); fetchSolicitudes() }, [])
+
+  const fetchUnidades = async () => {
+    setLoading(true)
+    try {
+      const snap = await getDocs(collection(db, 'disponibilidad'))
+      const reales = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      setUnidades([...UNIDADES_DEMO, ...reales])
+    } catch(e) { setUnidades(UNIDADES_DEMO) }
+    finally { setLoading(false) }
   }
 
-  const dias = getDias()
-
-  // Demo: disponibilidad ficticia por día
-  const disponibilidadDemo = {
-    'Tráiler': [3,2,4,1,3,2,0],
-    'Caja seca': [2,3,2,3,2,1,2],
-    'Caja refrigerada': [1,1,0,2,1,1,0],
-    'Rabón': [4,3,4,2,3,4,2],
-    'Tortón': [2,2,1,3,2,1,2],
+  const fetchSolicitudes = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'solicitudesUnidad'))
+      setSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    } catch(e) {}
   }
 
-  const colorDisp = (n) => {
-    if(n===0) return 'bg-red-100 text-red-600'
-    if(n<=1) return 'bg-amber-100 text-amber-600'
-    return 'bg-green-100 text-green-600'
+  const guardar = async () => {
+    if(!form.proveedor || !form.origen || !form.destino) return
+    setSaving(true)
+    try {
+      await addDoc(collection(db, 'disponibilidad'), { ...form, tarifa: Number(form.tarifa), fecha: new Date().toISOString(), createdAt: serverTimestamp() })
+      setShowForm(false)
+      setForm({ proveedor:'', origen:'', destino:'', tipoUnidad:'Tráiler', tarifa:'', contacto:'', tel:'', disponible:'Hoy' })
+      fetchUnidades()
+    } catch(e) { console.error(e) }
+    finally { setSaving(false) }
   }
 
-  const diasSemana = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
+  const solicitarUnidad = async (unidad) => {
+    try {
+      await addDoc(collection(db, 'solicitudesUnidad'), {
+        unidadId: unidad.id,
+        proveedor: unidad.proveedor,
+        origen: unidad.origen,
+        destino: unidad.destino,
+        tipoUnidad: unidad.tipoUnidad,
+        tarifa: unidad.tarifa,
+        nota: notaMensaje,
+        estado: 'pendiente',
+        solicitadoEn: serverTimestamp(),
+      })
+      setModalSolicitud(null)
+      setNotaMensaje('')
+      alert('✅ Solicitud enviada a Pricing. Recibirás confirmación pronto.')
+      fetchSolicitudes()
+    } catch(e) { console.error(e) }
+  }
+
+  const set = (k,v) => setForm(f => ({...f, [k]: v}))
+  const filtradas = filtro ? unidades.filter(u => u.origen.includes(filtro.toUpperCase()) || u.destino.includes(filtro.toUpperCase()) || u.tipoUnidad.toLowerCase().includes(filtro.toLowerCase())) : unidades
+  const pendientes = solicitudes.filter(s => s.estado === 'pendiente').length
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={() => setSemana(s => s-1)} className="btn-secondary py-1 px-3 text-xs">← Anterior</button>
-          <span className="text-sm font-medium text-gray-700">
-            {dias[0].toLocaleDateString('es-MX',{day:'numeric',month:'short'})} — {dias[6].toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'})}
-          </span>
-          <button onClick={() => setSemana(s => s+1)} className="btn-secondary py-1 px-3 text-xs">Siguiente →</button>
+          <div className="bg-[#1a3672] text-white rounded-xl px-4 py-2">
+            <p className="text-xs opacity-80">Unidades disponibles hoy</p>
+            <p className="text-2xl font-bold">{filtradas.length}</p>
+          </div>
+          {pendientes > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
+              <p className="text-xs text-amber-600">Solicitudes pendientes</p>
+              <p className="text-2xl font-bold text-amber-600">{pendientes}</p>
+            </div>
+          )}
         </div>
-        <button onClick={() => setSemana(0)} className="text-xs text-brand hover:underline">Hoy</button>
+        <div className="flex gap-2">
+          <input className="input text-xs py-1.5 w-44" placeholder="Buscar origen o destino..." value={filtro} onChange={e=>setFiltro(e.target.value)} />
+          <button onClick={() => setShowForm(!showForm)} className="btn-primary text-xs py-1.5">+ Agregar unidad</button>
+        </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left px-4 py-3 text-xs text-gray-500 font-medium w-36">Tipo de unidad</th>
-              {dias.map((d, i) => (
-                <th key={i} className={`px-3 py-3 text-center text-xs font-medium ${d.toDateString()===today.toDateString()?'text-brand':'text-gray-500'}`}>
-                  <div>{diasSemana[i]}</div>
-                  <div className={`text-sm font-bold ${d.toDateString()===today.toDateString()?'text-brand':'text-gray-700'}`}>
-                    {d.getDate()}
-                  </div>
-                </th>
-              ))}
-              <th className="px-3 py-3 text-xs text-gray-500 font-medium">Total sem.</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {Object.entries(disponibilidadDemo).map(([tipo, valores]) => (
-              <tr key={tipo} className="hover:bg-gray-50">
-                <td className="px-4 py-3">
-                  <span className="text-xs font-medium text-gray-700">{tipo}</span>
-                </td>
-                {valores.map((v, i) => (
-                  <td key={i} className="px-3 py-3 text-center">
-                    <span className={`inline-block w-8 h-8 rounded-lg text-xs font-bold leading-8 ${colorDisp(v)}`}>
-                      {v}
-                    </span>
-                  </td>
-                ))}
-                <td className="px-3 py-3 text-center">
-                  <span className="text-xs font-bold text-gray-600">{valores.reduce((a,b)=>a+b,0)}</span>
-                </td>
-              </tr>
+      {/* Solicitudes pendientes (solo pricing/admin) */}
+      {pendientes > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-sm font-semibold text-amber-800 mb-3">⏳ Solicitudes pendientes de confirmar</p>
+          <div className="space-y-2">
+            {solicitudes.filter(s=>s.estado==='pendiente').map(s => (
+              <div key={s.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-2.5 border border-amber-100">
+                <div>
+                  <p className="text-xs font-medium text-gray-800">{s.origen} → {s.destino} · {s.tipoUnidad}</p>
+                  <p className="text-[10px] text-gray-500">Proveedor: {s.proveedor} · {fmt(s.tarifa)}</p>
+                  {s.nota && <p className="text-[10px] text-amber-700 mt-0.5">Nota: {s.nota}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <button className="text-[10px] bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">✓ Confirmar</button>
+                  <button className="text-[10px] bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-medium border border-red-200 hover:bg-red-100">✗ Rechazar</button>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-4 text-xs text-gray-500">
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-100 inline-block"/>2+ unidades disponibles</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 inline-block"/>1 unidad disponible</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 inline-block"/>Sin disponibilidad</span>
-          <span className="ml-auto text-gray-400 italic">Datos demo — conectar con flota real próximamente</span>
+          </div>
+        </div>
+      )}
+
+      {/* Formulario nueva unidad */}
+      {showForm && (
+        <div className="card p-5 space-y-3 border-brand border">
+          <p className="text-sm font-semibold text-gray-700">Registrar unidad disponible</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="block text-xs text-gray-500 mb-1">Proveedor *</label><input className="input" value={form.proveedor} onChange={e=>set('proveedor',e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Tipo de unidad</label>
+              <select className="input" value={form.tipoUnidad} onChange={e=>set('tipoUnidad',e.target.value)}>
+                {['Tráiler','Caja seca','Caja refrigerada','Termo conge/Seco','Rabón','Tortón','Plataforma'].map(t=><option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div><label className="block text-xs text-gray-500 mb-1">Origen *</label><input className="input uppercase" placeholder="MTY" value={form.origen} onChange={e=>set('origen',e.target.value.toUpperCase())} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Destino / Paradas *</label><input className="input uppercase" placeholder="CDMX/GDL" value={form.destino} onChange={e=>set('destino',e.target.value.toUpperCase())} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Tarifa proveedor (MXN)</label><input type="number" className="input" value={form.tarifa} onChange={e=>set('tarifa',e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Disponibilidad</label>
+              <select className="input" value={form.disponible} onChange={e=>set('disponible',e.target.value)}>
+                <option>Hoy</option><option>Mañana</option><option>Esta semana</option>
+              </select>
+            </div>
+            <div><label className="block text-xs text-gray-500 mb-1">Contacto</label><input className="input" value={form.contacto} onChange={e=>set('contacto',e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Teléfono</label><input className="input" value={form.tel} onChange={e=>set('tel',e.target.value)} /></div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowForm(false)} className="btn-secondary text-xs py-1.5">Cancelar</button>
+            <button onClick={guardar} disabled={saving} className="btn-primary text-xs py-1.5">{saving?'Guardando...':'Guardar unidad'}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista de unidades */}
+      <div className="card overflow-hidden">
+        <div className="px-5 py-3 bg-[#1a3672] flex items-center justify-between">
+          <div>
+            <p className="text-white font-semibold text-sm">Unidades disponibles</p>
+            <p className="text-blue-200 text-xs">Oferta de capacidad · Flota nacional · {new Date().toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</p>
+          </div>
+          <div className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-medium">{filtradas.length} unidades</div>
+        </div>
+
+        <div className="divide-y divide-gray-50">
+          {loading ? (
+            <div className="p-8 text-center text-gray-400 text-sm">Cargando...</div>
+          ) : filtradas.length === 0 ? (
+            <div className="p-8 text-center text-gray-400 text-sm">Sin unidades para ese filtro.</div>
+          ) : filtradas.map(u => (
+            <div key={u.id} className="px-5 py-3 hover:bg-gray-50 transition-colors flex items-center gap-4">
+              <div className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
+              <div className="w-28 shrink-0">
+                <p className="text-sm font-bold text-gray-900">{u.origen}</p>
+                <p className="text-[10px] text-gray-400 truncate">{u.proveedor}</p>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-500 truncate">{u.destino}</p>
+              </div>
+              <div className="shrink-0">
+                <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">{u.tipoUnidad}</span>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-xs font-bold text-brand">{fmt(u.tarifa)}</p>
+                <p className="text-[10px] text-gray-400">costo proveedor</p>
+              </div>
+              <div className="shrink-0">
+                <span className="text-[10px] bg-green-50 text-green-700 px-2 py-1 rounded-lg border border-green-200 font-medium">{u.disponible}</span>
+              </div>
+              <button
+                onClick={() => setModalSolicitud(u)}
+                className="shrink-0 text-[10px] bg-brand text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Solicitar →
+              </button>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Modal solicitud */}
+      {modalSolicitud && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Solicitar unidad a Pricing</h2>
+            <p className="text-xs text-gray-500 mb-4">Se enviará una notificación al equipo de Pricing para confirmar disponibilidad y tarifa.</p>
+            <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-1">
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Proveedor</span><span className="font-medium">{modalSolicitud.proveedor}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Ruta</span><span className="font-medium">{modalSolicitud.origen} → {modalSolicitud.destino}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Unidad</span><span className="font-medium">{modalSolicitud.tipoUnidad}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Costo proveedor</span><span className="font-bold text-brand">{fmt(modalSolicitud.tarifa)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Contacto</span><span className="font-medium">{modalSolicitud.contacto} · {modalSolicitud.tel}</span></div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-xs text-gray-500 mb-1">Nota para Pricing (opcional)</label>
+              <textarea className="input resize-none text-xs" rows={3} placeholder="Ej. Cliente necesita para el jueves, confirmar precio con margen 25%..." value={notaMensaje} onChange={e=>setNotaMensaje(e.target.value)} />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setModalSolicitud(null); setNotaMensaje('') }} className="flex-1 btn-secondary text-xs py-2.5">Cancelar</button>
+              <button onClick={() => solicitarUnidad(modalSolicitud)} className="flex-1 btn-primary text-xs py-2.5 justify-center">
+                📨 Enviar solicitud
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
