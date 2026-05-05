@@ -538,17 +538,15 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
             onClick={()=>generarCartaPDF(em)}
             className="flex-1 bg-brand text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
           >
-            📄 Carta PDF
+            📄 CARTA DE INSTRUCCIONES
           </button>
-          {!em._demo && (
-            <button
+          <button
               onClick={() => setShowCambioEtapa(true)}
               className="flex-1 bg-gray-100 text-gray-700 text-xs font-medium py-2.5 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-1"
             >
               ⇄ Cambiar etapa
             </button>
-          )}
-          {!em._demo&&colIdx<COLS.length-1&&(
+          {colIdx<COLS.length-1&&(
             <button
               onClick={()=>{onAvanzar(em);onClose()}}
               className="px-3 bg-green-50 text-green-700 text-xs font-medium py-2.5 rounded-lg hover:bg-green-100 transition-colors border border-green-200"
