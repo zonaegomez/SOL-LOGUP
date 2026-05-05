@@ -240,12 +240,26 @@ ${em.observaciones?`<div class="alert-box" style="margin-bottom:16px;"><div styl
 }
 
 // Panel lateral de detalle
-function PanelDetalle({ em, onClose, onAvanzar }) {
+function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
   const [tabActivo, setTabActivo] = useState('info')
+  const [showCambioEtapa, setShowCambioEtapa] = useState(false)
+  const [etapaSeleccionada, setEtapaSeleccionada] = useState(em.etapa)
+  const [motivoCambio, setMotivoCambio] = useState('')
+  const [guardando, setGuardando] = useState(false)
   const s_eta = semETA(em.fechaETA)
   const s_etapa = semEtapa(em.etapa, em.etapaEntradaAt, em.horasLibresCarga, em.horasLibresDescarga, em.distanciaKm)
   const etaTransito = em.etapa==='transito'&&em.distanciaKm ? calcETA(em.distanciaKm) : null
   const colIdx = COLS.findIndex(c=>c.key===em.etapa)
+
+  const handleCambioEtapa = async () => {
+    if(etapaSeleccionada === em.etapa) { setShowCambioEtapa(false); return }
+    setGuardando(true)
+    await onCambiarEtapa(em, etapaSeleccionada, motivoCambio)
+    setGuardando(false)
+    setShowCambioEtapa(false)
+    setMotivoCambio('')
+    onClose()
+  }
 
   const InfoRow = ({label,value}) => (
     <div className="flex justify-between py-2 border-b border-gray-50 last:border-0">
@@ -444,18 +458,100 @@ function PanelDetalle({ em, onClose, onAvanzar }) {
           )}
         </div>
 
+        {/* Modal cambio manual de etapa */}
+        {showCambioEtapa && (
+          <div className="absolute inset-0 bg-white z-10 flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Cambiar etapa manualmente</p>
+                <p className="text-xs text-gray-400">{em.folio} · Etapa actual: <strong>{COLS.find(c=>c.key===em.etapa)?.label}</strong></p>
+              </div>
+              <button onClick={()=>setShowCambioEtapa(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              <p className="text-xs text-gray-500 mb-2">Selecciona la etapa destino:</p>
+              <div className="space-y-2">
+                {COLS.map((c, i) => {
+                  const esActual = c.key === em.etapa
+                  const esSeleccionada = c.key === etapaSeleccionada
+                  const esAnterior = i < colIdx
+                  return (
+                    <button
+                      key={c.key}
+                      onClick={() => setEtapaSeleccionada(c.key)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${
+                        esSeleccionada && !esActual ? 'border-brand bg-blue-50' :
+                        esActual ? 'border-gray-200 bg-gray-50 cursor-default' :
+                        'border-gray-100 hover:border-gray-300'
+                      }`}
+                    >
+                      <span className="text-base">{c.icon}</span>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${esActual?'text-gray-400':esSeleccionada?'text-brand':'text-gray-700'}`}>
+                          {c.label}
+                          {esActual && <span className="ml-2 text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">Actual</span>}
+                        </p>
+                        {esAnterior && !esActual && <p className="text-[10px] text-amber-600">↩ Regresar a esta etapa</p>}
+                        {i > colIdx && !esActual && <p className="text-[10px] text-brand">↗ Saltar a esta etapa</p>}
+                      </div>
+                      {esSeleccionada && !esActual && <span className="text-brand text-lg">✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {etapaSeleccionada !== em.etapa && (
+                <div className="mt-4">
+                  <label className="block text-xs text-gray-500 mb-1">Motivo del cambio <span className="text-gray-400">(opcional)</span></label>
+                  <textarea
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+                    rows={3}
+                    placeholder="Ej. Cliente confirmó descarga anticipada, ajuste por retraso en aduana..."
+                    value={motivoCambio}
+                    onChange={e => setMotivoCambio(e.target.value)}
+                  />
+                  <div className="mt-1 text-[10px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                    ⚠️ El cambio quedará registrado en el histórico con tu nombre, la etapa anterior y el motivo.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+              <button onClick={() => setShowCambioEtapa(false)} className="flex-1 bg-gray-100 text-gray-700 text-xs font-medium py-2.5 rounded-lg hover:bg-gray-200">
+                Cancelar
+              </button>
+              <button
+                onClick={handleCambioEtapa}
+                disabled={etapaSeleccionada === em.etapa || guardando}
+                className="flex-1 bg-brand text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {guardando ? 'Guardando...' : `Mover a "${COLS.find(c=>c.key===etapaSeleccionada)?.label}"`}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Footer acciones */}
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2 shrink-0">
+        <div className="px-5 py-4 border-t border-gray-100 flex gap-2 shrink-0 flex-wrap">
           <button
             onClick={()=>generarCartaPDF(em)}
-            className="flex-1 bg-brand text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            className="flex-1 bg-brand text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
           >
-            📄 Carta de Instrucciones PDF
+            📄 Carta PDF
           </button>
+          {!em._demo && (
+            <button
+              onClick={() => setShowCambioEtapa(true)}
+              className="flex-1 bg-gray-100 text-gray-700 text-xs font-medium py-2.5 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-1"
+            >
+              ⇄ Cambiar etapa
+            </button>
+          )}
           {!em._demo&&colIdx<COLS.length-1&&(
             <button
               onClick={()=>{onAvanzar(em);onClose()}}
-              className="px-4 bg-gray-100 text-gray-700 text-xs font-medium py-2.5 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-3 bg-green-50 text-green-700 text-xs font-medium py-2.5 rounded-lg hover:bg-green-100 transition-colors border border-green-200"
             >
               → {COLS[colIdx+1]?.label}
             </button>
@@ -521,6 +617,24 @@ export default function Board() {
     await updateDoc(doc(db,'embarques',embarque.id),{etapa:nueva.key,etapaEntradaAt:new Date().toISOString(),updatedAt:serverTimestamp()})
     await addDoc(collection(db,'embarques',embarque.id,'historico'),{etapa:nueva.label,usuario:perfil?.nombre||user?.email,timestamp:serverTimestamp(),tipo:'etapa'})
     setEmbarques(prev=>prev.map(em=>em.id===embarque.id?{...em,etapa:nueva.key,etapaEntradaAt:new Date().toISOString()}:em))
+  }
+
+  const cambiarEtapa = async(embarque, nuevaEtapaKey, motivo) => {
+    if(!embarque.id || embarque._demo) return
+    const etapaAnterior = COLS.find(c=>c.key===embarque.etapa)?.label || embarque.etapa
+    const etapaNueva = COLS.find(c=>c.key===nuevaEtapaKey)?.label || nuevaEtapaKey
+    await updateDoc(doc(db,'embarques',embarque.id),{
+      etapa: nuevaEtapaKey, etapaEntradaAt: new Date().toISOString(), updatedAt: serverTimestamp()
+    })
+    await addDoc(collection(db,'embarques',embarque.id,'historico'),{
+      etapa: `Cambio manual: ${etapaAnterior} → ${etapaNueva}`,
+      detalle: motivo || 'Sin motivo especificado',
+      usuario: perfil?.nombre || user?.email,
+      timestamp: serverTimestamp(), tipo: 'cambio_manual',
+    })
+    setEmbarques(prev=>prev.map(em=>
+      em.id===embarque.id ? {...em, etapa:nuevaEtapaKey, etapaEntradaAt:new Date().toISOString()} : em
+    ))
   }
 
   const todos=[...embarques,...(showDemo?DEMO_EMBARQUES:[])].filter(e=>{
@@ -596,7 +710,7 @@ export default function Board() {
 
       {showDemo&&<p className="text-[11px] text-gray-400 text-center">Embarques DEMO para ilustrar el sistema.</p>}
 
-      {panelEm&&<PanelDetalle em={panelEm} onClose={()=>setPanelEm(null)} onAvanzar={avanzarEtapa}/>}
+      {panelEm&&<PanelDetalle em={panelEm} onClose={()=>setPanelEm(null)} onAvanzar={avanzarEtapa} onCambiarEtapa={cambiarEtapa}/>}
     </div>
   )
 }
