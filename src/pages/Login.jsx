@@ -29,11 +29,9 @@ export default function Login() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <span className="text-white text-xl font-bold">SOL</span>
-          </div>
+          <img src="/logupcompleto.png" alt="Log Up" className="h-16 object-contain mx-auto mb-4" />
           <h1 className="text-xl font-semibold text-gray-900">Sistema Operativo Logístico</h1>
-          <p className="text-sm text-gray-500 mt-1">Log Up · Acceso al sistema</p>
+          <p className="text-sm text-gray-500 mt-1">Acceso al sistema</p>
         </div>
 
         <div className="card p-6">
