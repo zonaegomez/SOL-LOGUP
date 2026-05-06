@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, deleteDoc, doc as fsDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useAuth } from '../../context/AuthContext'
+import { useSolicitudAut } from '../../hooks/useSolicitudAut'
 
 const TIPO_TAG = { ftl: 'FTL', ltl: 'LTL', int: 'Internacional', ref: 'Refrigerado', exp: 'Exportación' }
 const TIPO_COLOR = {
