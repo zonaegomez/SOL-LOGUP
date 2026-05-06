@@ -416,6 +416,43 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
   })
   const setH = (k,v) => setHojaData(d=>({...d,[k]:v}))
   const [generandoPNG, setGenerandoPNG] = useState(false)
+  const [editandoFechas, setEditandoFechas] = useState(false)
+  const [fechasEdit, setFechasEdit] = useState({
+    fechaCarga: em.fechaCarga ? new Date(em.fechaCarga).toISOString().slice(0,16) : '',
+    fechaETA: em.fechaETA ? new Date(em.fechaETA).toISOString().slice(0,16) : '',
+    horasLibresCarga: em.horasLibresCarga || 6,
+    horasLibresDescarga: em.horasLibresDescarga || 6,
+    observaciones: em.observaciones || '',
+  })
+  const [guardandoFechas, setGuardandoFechas] = useState(false)
+  const { perfil } = useAuth()
+
+  const guardarFechas = async () => {
+    setGuardandoFechas(true)
+    try {
+      const { updateDoc, doc: fsDoc, addDoc, collection: fsCol, serverTimestamp: sTs } = await import('firebase/firestore')
+      await updateDoc(fsDoc(db, 'embarques', em.id), {
+        fechaCarga: fechasEdit.fechaCarga,
+        fechaETA: fechasEdit.fechaETA,
+        horasLibresCarga: Number(fechasEdit.horasLibresCarga),
+        horasLibresDescarga: Number(fechasEdit.horasLibresDescarga),
+        observaciones: fechasEdit.observaciones,
+        updatedAt: sTs(),
+      })
+      await addDoc(fsCol(db, 'embarques', em.id, 'historico'), {
+        tipo: 'edicion',
+        descripcion: `Fechas y datos actualizados`,
+        usuario: perfil?.nombre || perfil?.email || 'usuario',
+        fecha: sTs(),
+      })
+      setEditandoFechas(false)
+      onClose()
+    } catch(e) { console.error(e) }
+    finally { setGuardandoFechas(false) }
+  }
+
+  const setF = (k,v) => setFechasEdit(d=>({...d,[k]:v}))
+
   const s_eta = semETA(em.fechaETA)
   const s_etapa = semEtapa(em.etapa, em.etapaEntradaAt, em.horasLibresCarga, em.horasLibresDescarga, em.distanciaKm)
   const etaTransito = em.etapa==='transito'&&em.distanciaKm ? calcETA(em.distanciaKm) : null
@@ -512,14 +549,56 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
                 <InfoRow label="Seguimiento" value={em.seguimiento}/>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Ruta y fechas</p>
-                <InfoRow label="Origen" value={`${em.origenNombre} (CP ${em.origenCP||'—'})`}/>
-                <InfoRow label="Destino" value={`${em.destinoNombre} (CP ${em.destinoCP||'—'})`}/>
-                <InfoRow label="Fecha carga" value={em.fechaCarga?new Date(em.fechaCarga).toLocaleString('es-MX'):'—'}/>
-                <InfoRow label="ETA" value={em.fechaETA?new Date(em.fechaETA).toLocaleString('es-MX'):'—'}/>
-                <InfoRow label="Horas libres carga" value={`${em.horasLibresCarga||6} hrs`}/>
-                <InfoRow label="Horas libres descarga" value={`${em.horasLibresDescarga||6} hrs`}/>
-                <InfoRow label="Estadías" value="Bloques de 12 hrs o fracción"/>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Ruta y fechas</p>
+                  <button onClick={()=>setEditandoFechas(!editandoFechas)} className="text-[10px] text-brand hover:underline">
+                    {editandoFechas ? '× Cancelar' : '✏️ Editar'}
+                  </button>
+                </div>
+
+                {editandoFechas ? (
+                  <div className="space-y-3 bg-blue-50 rounded-xl p-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">Fecha y hora de carga</label>
+                        <input type="datetime-local" className="input text-xs py-1.5" value={fechasEdit.fechaCarga} onChange={e=>setF('fechaCarga',e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">Fecha y hora de descarga (ETA)</label>
+                        <input type="datetime-local" className="input text-xs py-1.5" value={fechasEdit.fechaETA} onChange={e=>setF('fechaETA',e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">Horas libres carga</label>
+                        <input type="number" className="input text-xs py-1.5" value={fechasEdit.horasLibresCarga} onChange={e=>setF('horasLibresCarga',e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">Horas libres descarga</label>
+                        <input type="number" className="input text-xs py-1.5" value={fechasEdit.horasLibresDescarga} onChange={e=>setF('horasLibresDescarga',e.target.value)} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-gray-500 mb-1">Observaciones / Instrucciones especiales</label>
+                      <textarea className="input text-xs resize-none" rows={2} value={fechasEdit.observaciones} onChange={e=>setF('observaciones',e.target.value)} />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={()=>setEditandoFechas(false)} className="flex-1 text-xs bg-white border border-gray-200 text-gray-600 py-2 rounded-lg hover:bg-gray-50">Cancelar</button>
+                      <button onClick={guardarFechas} disabled={guardandoFechas} className="flex-1 text-xs bg-brand text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+                        {guardandoFechas ? 'Guardando...' : '✓ Guardar cambios'}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-blue-500 text-center">El cambio quedará registrado en el historial del embarque</p>
+                  </div>
+                ) : (
+                  <>
+                    <InfoRow label="Origen" value={`${em.origenNombre} (CP ${em.origenCP||'—'})`}/>
+                    <InfoRow label="Destino" value={`${em.destinoNombre} (CP ${em.destinoCP||'—'})`}/>
+                    <InfoRow label="Fecha carga" value={em.fechaCarga?new Date(em.fechaCarga).toLocaleString('es-MX'):'—'}/>
+                    <InfoRow label="ETA" value={em.fechaETA?new Date(em.fechaETA).toLocaleString('es-MX'):'—'}/>
+                    <InfoRow label="Horas libres carga" value={`${em.horasLibresCarga||6} hrs`}/>
+                    <InfoRow label="Horas libres descarga" value={`${em.horasLibresDescarga||6} hrs`}/>
+                    <InfoRow label="Estadías" value="Bloques de 12 hrs o fracción"/>
+                  </>
+                )}
               </div>
               <div>
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Operador y unidad</p>
