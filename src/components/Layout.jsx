@@ -1,5 +1,4 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { ISOLOGO, LOGO_COMPLETO } from '../logos'
 import { signOut } from 'firebase/auth'
 import { auth, db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
@@ -54,10 +53,11 @@ export default function Layout() {
       <aside className={`${collapsed ? 'w-16' : 'w-56'} bg-white border-r border-gray-100 flex flex-col transition-all duration-200 shrink-0`}>
         {/* Logo */}
         <div className="h-14 flex items-center px-3 border-b border-gray-100">
-          {collapsed
-            ? <img src={ISOLOGO} alt="Log Up" className="w-8 h-8 object-contain mx-auto" />
-            : <img src={LOGO_COMPLETO} alt="Log Up" className="h-9 object-contain" />
-          }
+          {collapsed ? (
+            <img src="/isologo.png" alt="Log Up" className="w-8 h-8 object-contain mx-auto" />
+          ) : (
+            <img src="/logupcompleto.png" alt="Log Up" className="h-9 object-contain" />
+          )}
         </div>
 
         {/* Nav */}
@@ -70,6 +70,7 @@ export default function Layout() {
               </div>
             )
             const hasBadge = item.badge && autPendientes > 0
+            const IconComp = item.Icon
             return (
               <NavLink
                 key={item.path}
@@ -81,7 +82,7 @@ export default function Layout() {
                 }
               >
                 <span className="w-5 flex items-center justify-center shrink-0 relative">
-                  {item.Icon && <item.Icon className="w-4 h-4" />}
+                  {IconComp && <IconComp className="w-4 h-4" />}
                   {hasBadge && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
                       {autPendientes > 9 ? '9+' : autPendientes}
