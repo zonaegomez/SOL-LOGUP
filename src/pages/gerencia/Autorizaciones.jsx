@@ -141,9 +141,11 @@ export default function Autorizaciones() {
                   <div className="flex-1">
                     {/* Header */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium flex items-center gap-1 w-fit ${tipo.color}`}>
-                        {tipo.Icon && <tipo.Icon className="w-3 h-3" />} {tipo.label}
-                      </span>
+                      {(() => { const TipoIcon = tipo.Icon; return (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium flex items-center gap-1 w-fit ${tipo.color}`}>
+                          {TipoIcon && <TipoIcon className="w-3 h-3" />} {tipo.label}
+                        </span>
+                      )})()}
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                         aut.estado==='pendiente'?'bg-amber-100 text-amber-700':
                         aut.estado==='aprobado'?'bg-green-100 text-green-700':
