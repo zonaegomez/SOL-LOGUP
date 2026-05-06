@@ -16,6 +16,8 @@ const TIPO_COLOR = {
 
 export default function Embarques() {
   const [embarques, setEmbarques] = useState([])
+  const { perfil, esMaestro, esGerente } = useAuth()
+  const { SolicitudModal, solicitarAut } = useSolicitudAut(perfil)
   const [filtrados, setFiltrados] = useState([])
   const [busqueda, setBusqueda] = useState('')
   const [fechaInicio, setFechaInicio] = useState('')
@@ -30,6 +32,8 @@ export default function Embarques() {
     setFechaFin(hoy.toISOString().split('T')[0])
     fetchEmbarques()
   }, [])
+
+
 
   const fetchEmbarques = async () => {
     setLoading(true)
@@ -169,6 +173,7 @@ export default function Embarques() {
           </div>
         )}
       </div>
+      <SolicitudModal />
     </div>
   )
 }
