@@ -4,13 +4,14 @@ import { db } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
 import Proveedores from './Proveedores'
 import Disponibilidad from './Disponibilidad'
+import CotizadorInteligente from './CotizadorInteligente'
 import { useSolicitudAut } from '../../hooks/useSolicitudAut'
 
 const TABS = [
   { key: 'proveedores', label: 'Proveedores' },
   { key: 'disponibilidad', label: 'Disponibilidad' },
   { key: 'tarifas', label: 'Tarifas por ruta' },
-  { key: 'cotizador', label: 'Cotizador interno' },
+  { key: 'cotizador', label: 'Cotizador inteligente' },
 ]
 
 const TIPOS_UNIDAD = ['Tráiler', 'Caja seca', 'Caja refrigerada', 'Rabón', 'Tortón', 'Plataforma', 'Pipa']
@@ -770,7 +771,7 @@ export default function Pricing() {
       {tab === 'proveedores' && <Proveedores />}
       {tab === 'disponibilidad' && <Disponibilidad />}
       {tab === 'tarifas' && <TabTarifas />}
-      {tab === 'cotizador' && <TabCotizador />}
+      {tab === 'cotizador' && <CotizadorInteligente />}
     </div>
   )
 }
