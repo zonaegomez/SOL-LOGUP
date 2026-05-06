@@ -1,28 +1,47 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { ISOLOGO, LOGO_COMPLETO } from '../logos'
 import { signOut } from 'firebase/auth'
-import { auth } from '../firebase'
+import { auth, db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 
 const NAV = [
-  { label: 'Dashboard', icon: '▦', path: '/dashboard', roles: ['admin','ventas','operaciones','pricing'] },
-  { label: 'Embarques', icon: '🚛', path: '/embarques', roles: ['admin','ventas','operaciones'] },
-  { label: 'Cotizaciones', icon: '📄', path: '/cotizaciones', roles: ['admin','ventas'] },
-  { label: 'Operaciones', icon: '📋', path: '/operaciones', roles: ['admin','operaciones'] },
-  { label: 'Pricing', icon: '💲', path: '/pricing', roles: ['admin','pricing'] },
-  { divider: true, label: 'Administración', roles: ['admin'] },
-  { label: 'Usuarios', icon: '👤', path: '/admin/usuarios', roles: ['admin'] },
-  { label: 'Clientes', icon: '🏢', path: '/admin/clientes', roles: ['admin'] },
-  { label: 'Catálogos', icon: '📂', path: '/admin/catalogos', roles: ['admin'] },
-  { label: 'Importar maestro', icon: '📊', path: '/admin/importar', roles: ['admin'] },
+  { label: 'Dashboard', icon: '▦', path: '/dashboard', roles: ['admin','ventas','operaciones','pricing','gerente','maestro'] },
+  { label: 'Embarques', icon: '🚛', path: '/embarques', roles: ['admin','ventas','operaciones','maestro'] },
+  { label: 'Cotizaciones', icon: '📄', path: '/cotizaciones', roles: ['admin','ventas','maestro'] },
+  { label: 'Operaciones', icon: '📋', path: '/operaciones', roles: ['admin','operaciones','maestro'] },
+  { label: 'Pricing', icon: '💲', path: '/pricing', roles: ['admin','pricing','maestro'] },
+  { divider: true, label: 'Gerencia', roles: ['gerente','maestro'] },
+  { label: 'Autorizaciones', icon: '✅', path: '/gerencia/autorizaciones', roles: ['gerente','maestro'], badge: true },
+  { label: 'Reportes', icon: '📈', path: '/gerencia/reportes', roles: ['gerente','maestro'] },
+  { divider: true, label: 'Administración', roles: ['admin','maestro'] },
+  { label: 'Usuarios', icon: '👤', path: '/admin/usuarios', roles: ['admin','maestro'] },
+  { label: 'Clientes', icon: '🏢', path: '/admin/clientes', roles: ['admin','maestro'] },
+  { label: 'Catálogos', icon: '📂', path: '/admin/catalogos', roles: ['admin','maestro'] },
+  { label: 'Importar maestro', icon: '📊', path: '/admin/importar', roles: ['admin','maestro'] },
 ]
 
 export default function Layout() {
-  const { perfil, user } = useAuth()
+  const { perfil, user, esMaestro } = useAuth()
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
+  const [autPendientes, setAutPendientes] = useState(0)
   const rol = perfil?.rol || 'ventas'
+
+  // Cargar autorizaciones pendientes para gerente/maestro
+  useEffect(() => {
+    if (!['gerente','maestro'].includes(rol)) return
+    const fetchPendientes = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'autorizaciones'), where('estado', '==', 'pendiente')))
+        setAutPendientes(snap.docs.length)
+      } catch(e) {}
+    }
+    fetchPendientes()
+    const interval = setInterval(fetchPendientes, 30000)
+    return () => clearInterval(interval)
+  }, [rol])
 
   const handleLogout = async () => {
     await signOut(auth)
@@ -31,7 +50,6 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
       <aside className={`${collapsed ? 'w-16' : 'w-56'} bg-white border-r border-gray-100 flex flex-col transition-all duration-200 shrink-0`}>
         {/* Logo */}
         <div className="h-14 flex items-center px-3 border-b border-gray-100">
@@ -50,6 +68,7 @@ export default function Layout() {
                 {!collapsed && <p className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">{item.label}</p>}
               </div>
             )
+            const hasBadge = item.badge && autPendientes > 0
             return (
               <NavLink
                 key={item.path}
@@ -60,8 +79,24 @@ export default function Layout() {
                   }`
                 }
               >
-                <span className="text-base w-5 text-center shrink-0">{item.icon}</span>
-                {!collapsed && <span>{item.label}</span>}
+                <span className="text-base w-5 text-center shrink-0 relative">
+                  {item.icon}
+                  {hasBadge && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
+                      {autPendientes > 9 ? '9+' : autPendientes}
+                    </span>
+                  )}
+                </span>
+                {!collapsed && (
+                  <span className="flex-1 flex items-center justify-between">
+                    {item.label}
+                    {hasBadge && (
+                      <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {autPendientes}
+                      </span>
+                    )}
+                  </span>
+                )}
               </NavLink>
             )
           })}
@@ -71,43 +106,40 @@ export default function Layout() {
         <div className="border-t border-gray-100 p-3">
           {!collapsed && (
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-full bg-brand-light flex items-center justify-center text-brand text-xs font-semibold">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
+                esMaestro ? 'bg-purple-100 text-purple-700' : 'bg-brand-light text-brand'
+              }`}>
                 {(perfil?.nombre || user?.email || 'U')[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-800 truncate">{perfil?.nombre || user?.email}</p>
-                <p className="text-[10px] text-gray-400 capitalize">{rol}</p>
+                <p className={`text-[10px] capitalize ${esMaestro ? 'text-purple-500 font-medium' : 'text-gray-400'}`}>
+                  {esMaestro ? '⚡ Maestro' : rol}
+                </p>
               </div>
             </div>
           )}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 text-xs text-gray-500 hover:text-red-500 transition-colors px-1 py-1 rounded"
-          >
-            <span>⬡</span>
-            {!collapsed && 'Cerrar sesión'}
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setCollapsed(!collapsed)} className="flex-1 text-[10px] text-gray-400 hover:text-gray-600 py-1 text-left px-1">
+              {collapsed ? '→' : '← Colapsar'}
+            </button>
+            <button onClick={handleLogout} className="text-[10px] text-gray-400 hover:text-red-500 py-1 px-1">
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Topbar */}
-        <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0">
-          <button onClick={() => setCollapsed(!collapsed)} className="text-gray-400 hover:text-gray-600">
-            ☰
-          </button>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400">v1.0.0</span>
-            <div className="w-2 h-2 rounded-full bg-green-400" title="En línea" />
-          </div>
-        </header>
-
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 bg-white">
+          <div />
+          <span className="text-xs text-gray-400">v1.0.0 <span className="inline-block w-2 h-2 rounded-full bg-green-400 ml-1" /></span>
+        </div>
+        <div className="p-6">
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }
