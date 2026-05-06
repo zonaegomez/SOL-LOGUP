@@ -1,19 +1,20 @@
 import html2canvas from 'html2canvas'
+import { FileText, MapPin, Package, Truck, Building2, CheckCircle, DollarSign, Receipt, CreditCard, Eye, EyeOff, RefreshCw, AlertCircle, Clock, ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
 
 const COLS = [
-  { key: 'embarcadoCreado', label: 'Creado', icon: '📋' },
-  { key: 'posicionamiento', label: 'Posicionamiento', icon: '📍' },
-  { key: 'carga', label: 'Carga', icon: '📦' },
-  { key: 'transito', label: 'Tránsito', icon: '🚛' },
-  { key: 'descarga', label: 'Descarga', icon: '🏭' },
-  { key: 'entregado', label: 'Entregado', icon: '✅' },
-  { key: 'provisiones', label: 'Provisiones', icon: '💰' },
-  { key: 'porFacturar', label: 'Por facturar', icon: '🧾' },
-  { key: 'cobrado', label: 'Cobrado', icon: '💳' },
+  { key: 'embarcadoCreado', label: 'Creado', icon: '' },
+  { key: 'posicionamiento', label: 'Posicionamiento', icon: '' },
+  { key: 'carga', label: 'Carga', icon: '' },
+  { key: 'transito', label: 'Tránsito', icon: '' },
+  { key: 'descarga', label: 'Descarga', icon: '' },
+  { key: 'entregado', label: 'Entregado', icon: '' },
+  { key: 'provisiones', label: 'Provisiones', icon: '' },
+  { key: 'porFacturar', label: 'Por facturar', icon: '' },
+  { key: 'cobrado', label: 'Cobrado', icon: '' },
 ]
 
 const LIMITES_ETAPA = {
@@ -60,7 +61,7 @@ function semEtapa(etapa,entrada,hCarga,hDesc,km) {
   const hrs=(Date.now()-new Date(entrada).getTime())/3600000
   const pct=(hrs/lim)*100
   const rest=lim-hrs
-  if(pct>=100) return {color:'red',texto:`+${Math.round(hrs-lim)}h estadía ⚠️`,estadia:true}
+  if(pct>=100) return {color:'red',texto:`+${Math.round(hrs-lim)}h estadía `,estadia:true}
   if(pct>=75) return {color:'yellow',texto:`${Math.round(rest*60)}min libres`}
   return {color:'green',texto:`${Math.round(rest)}h libres`}
 }
@@ -127,7 +128,7 @@ function generarCartaPDF(em) {
     <div style="font-size:10px;color:#666;">CARTA DE INSTRUCCIONES DE EMBARQUE</div>
     <h2>${em.folio}</h2>
     <div class="badge">${TIPO_LABEL[em.categoria]||em.categoria}</div>
-    ${em.prioridad==='urgente'?'<div style="display:inline-block;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-left:4px;">🔴 URGENTE</div>':''}
+    ${em.prioridad==='urgente'?'<div style="display:inline-block;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-left:4px;">URGENTE</div>':''}
   </div>
 </div>
 
@@ -213,7 +214,7 @@ function generarCartaPDF(em) {
   </table>
 </div>
 
-${em.observaciones?`<div class="alert-box" style="margin-bottom:16px;"><div style="font-size:9px;font-weight:700;color:#92400e;margin-bottom:4px;">⚠️ INSTRUCCIONES ESPECIALES</div><p>${em.observaciones}</p></div>`:''}
+${em.observaciones?`<div class="alert-box" style="margin-bottom:16px;"><div style="font-size:9px;font-weight:700;color:#92400e;margin-bottom:4px;"> INSTRUCCIONES ESPECIALES</div><p>${em.observaciones}</p></div>`:''}
 
 <div class="footer">
   <div>
@@ -489,7 +490,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-mono text-sm font-bold text-gray-900">{em.folio}</span>
                 <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${TIPO_COLOR[em.categoria]||'bg-gray-100 text-gray-600'}`}>{TIPO_TAG[em.categoria]}</span>
-                {em.prioridad==='urgente'&&<span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded font-medium">🔴 URG</span>}
+                {em.prioridad==='urgente'&&<span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded font-medium">URG</span>}
                 {em._demo&&<span className="text-[9px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100">DEMO</span>}
               </div>
               <p className="text-sm font-semibold text-gray-800">{em.cliente}</p>
@@ -509,7 +510,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
               <span className={`text-xs font-medium ${SEM[s_etapa.color].text}`}>{s_etapa.texto}</span>
             </div>}
             {etaTransito&&<div className="flex items-center gap-1 bg-blue-50 rounded-lg px-3 py-1.5">
-              <span className="text-xs text-brand">🚛 ~{etaTransito}h · {em.distanciaKm}km</span>
+              <span className="text-xs text-brand"> ~{etaTransito}h · {em.distanciaKm}km</span>
             </div>}
           </div>
 
@@ -552,7 +553,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Ruta y fechas</p>
                   <button onClick={()=>setEditandoFechas(!editandoFechas)} className="text-[10px] text-brand hover:underline">
-                    {editandoFechas ? '× Cancelar' : '✏️ Editar'}
+                    {editandoFechas ? '× Cancelar' : ' Editar'}
                   </button>
                 </div>
 
@@ -583,7 +584,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
                     <div className="flex gap-2">
                       <button onClick={()=>setEditandoFechas(false)} className="flex-1 text-xs bg-white border border-gray-200 text-gray-600 py-2 rounded-lg hover:bg-gray-50">Cancelar</button>
                       <button onClick={guardarFechas} disabled={guardandoFechas} className="flex-1 text-xs bg-brand text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60">
-                        {guardandoFechas ? 'Guardando...' : '✓ Guardar cambios'}
+                        {guardandoFechas ? 'Guardando...' : ' Guardar cambios'}
                       </button>
                     </div>
                     <p className="text-[10px] text-blue-500 text-center">El cambio quedará registrado en el historial del embarque</p>
@@ -609,7 +610,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
               </div>
               {em.observaciones&&(
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
-                  <p className="text-[10px] font-semibold text-amber-700 mb-1">⚠️ Instrucciones especiales</p>
+                  <p className="text-[10px] font-semibold text-amber-700 mb-1"> Instrucciones especiales</p>
                   <p className="text-xs text-amber-800">{em.observaciones}</p>
                 </div>
               )}
@@ -647,14 +648,14 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
               <div className="border border-gray-100 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">🧾</span>
+                    <span className="text-lg"></span>
                     <div>
                       <p className="text-sm font-semibold text-gray-800">Factura del proveedor</p>
                       <p className="text-xs text-gray-400">Documento fiscal del transportista</p>
                     </div>
                   </div>
                   {em._demo
-                    ? <span className="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-100 font-medium">✓ Recibida (demo)</span>
+                    ? <span className="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-100 font-medium"> Recibida (demo)</span>
                     : <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-1 rounded-lg border border-amber-100">Pendiente</span>
                   }
                 </div>
@@ -675,14 +676,14 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
               <div className="border border-gray-100 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">📄</span>
+                    <span className="text-lg"></span>
                     <div>
                       <p className="text-sm font-semibold text-gray-800">POD — Prueba de entrega</p>
                       <p className="text-xs text-gray-400">Evidencia fotográfica y firma del receptor</p>
                     </div>
                   </div>
                   {em._demo&&em.etapa==='porFacturar'
-                    ? <span className="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-100 font-medium">✓ Recibido (demo)</span>
+                    ? <span className="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-100 font-medium"> Recibido (demo)</span>
                     : <span className="text-[10px] bg-gray-50 text-gray-400 px-2 py-1 rounded-lg border border-gray-100">Pendiente</span>
                   }
                 </div>
@@ -700,7 +701,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
               </div>
 
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-                <p className="text-xs font-medium text-brand mb-1">📱 Portal de proveedores</p>
+                <p className="text-xs font-medium text-brand mb-1"> Portal de proveedores</p>
                 <p className="text-[11px] text-blue-600">Los transportistas y operadores tendrán acceso a un portal donde suben facturas, evidencias fotográficas y POD directamente vinculados al folio del embarque.</p>
               </div>
             </div>
@@ -763,7 +764,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
                 disabled={generandoPNG}
                 className="flex-1 bg-[#1a3672] text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-900 transition-colors disabled:opacity-60"
               >
-                {generandoPNG ? '⏳ Generando...' : '📥 Descargar PNG'}
+                {generandoPNG ? '⏳ Generando...' : 'Descargar PNG'}
               </button>
             </div>
           </div>
@@ -805,7 +806,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
                         {esAnterior && !esActual && <p className="text-[10px] text-amber-600">↩ Regresar a esta etapa</p>}
                         {i > colIdx && !esActual && <p className="text-[10px] text-brand">↗ Saltar a esta etapa</p>}
                       </div>
-                      {esSeleccionada && !esActual && <span className="text-brand text-lg">✓</span>}
+                      {esSeleccionada && !esActual && <span className="text-brand text-lg"></span>}
                     </button>
                   )
                 })}
@@ -822,7 +823,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
                     onChange={e => setMotivoCambio(e.target.value)}
                   />
                   <div className="mt-1 text-[10px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-                    ⚠️ El cambio quedará registrado en el histórico con tu nombre, la etapa anterior y el motivo.
+                     El cambio quedará registrado en el histórico con tu nombre, la etapa anterior y el motivo.
                   </div>
                 </div>
               )}
@@ -849,13 +850,13 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
             onClick={()=>generarCartaPDF(em)}
             className="flex-1 bg-brand text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
           >
-            📄 CARTA
+             CARTA
           </button>
           <button
             onClick={()=>setShowHojaViaje(true)}
             className="flex-1 bg-[#1a3672] text-white text-xs font-medium py-2.5 rounded-lg hover:bg-blue-900 transition-colors flex items-center justify-center gap-1"
           >
-            🚛 HOJA DE VIAJE
+             HOJA DE VIAJE
           </button>
           <button
               onClick={() => setShowCambioEtapa(true)}
@@ -899,7 +900,7 @@ function TarjetaEmbarque({ em, onClick }) {
       <p className="text-[10px] text-gray-400 mb-2 truncate">{em.origenNombre} → {em.destinoNombre}</p>
       {s_eta&&<div className="flex items-center gap-1 mb-1"><div className={`w-2 h-2 rounded-full shrink-0 ${SEM[s_eta.color].dot}`}/><span className={`text-[9px] font-medium ${SEM[s_eta.color].text}`}>ETA: {s_eta.texto}</span></div>}
       {s_etapa&&<div className="flex items-center gap-1 mb-2"><div className={`w-2 h-2 rounded-full shrink-0 ${SEM[s_etapa.color].dot}`}/><span className={`text-[9px] font-medium ${SEM[s_etapa.color].text}`}>{s_etapa.texto}</span></div>}
-      {etaT&&<p className="text-[9px] text-gray-400 mb-2">🚛 ~{etaT}h · {em.distanciaKm}km</p>}
+      {etaT&&<p className="text-[9px] text-gray-400 mb-2"> ~{etaT}h · {em.distanciaKm}km</p>}
       <div className="flex items-center justify-between">
         <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${TIPO_COLOR[em.categoria]||'bg-gray-100 text-gray-500'}`}>{TIPO_TAG[em.categoria]||'—'}</span>
         <span className="text-[9px] text-gray-300">Ver detalle →</span>
@@ -976,13 +977,13 @@ export default function Board() {
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>Alerta</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/>Crítico</span>
           </div>
-          {nC>0&&<span className="bg-red-50 text-red-600 text-xs font-medium px-2 py-1 rounded-lg">🔴 {nC} crítico{nC>1?'s':''}</span>}
-          {nA>0&&<span className="bg-amber-50 text-amber-600 text-xs font-medium px-2 py-1 rounded-lg">🟡 {nA} alerta{nA>1?'s':''}</span>}
+          {nC>0&&<span className="bg-red-50 text-red-600 text-xs font-medium px-2 py-1 rounded-lg">{nC} crítico{nC>1?'s':''}</span>}
+          {nA>0&&<span className="bg-amber-50 text-amber-600 text-xs font-medium px-2 py-1 rounded-lg">{nA} alerta{nA>1?'s':''}</span>}
         </div>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        {[{key:'todos',label:'Todos'},{key:'urgentes',label:'🔴 Urgentes'},{key:'criticos',label:'⚠️ Críticos'}].map(f=>(
+        {[{key:'todos',label:'Todos'},{key:'urgentes',label:'Urgentes'},{key:'criticos',label:' Críticos'}].map(f=>(
           <button key={f.key} onClick={()=>setFiltro(f.key)}
             className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${filtro===f.key?'bg-brand text-white':'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
           >{f.label}</button>
@@ -990,7 +991,7 @@ export default function Board() {
         <div className="ml-auto flex items-center gap-2">
           <button onClick={()=>setShowDemo(!showDemo)}
             className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${showDemo?'bg-amber-50 border-amber-200 text-amber-700':'bg-white border-gray-200 text-gray-500'}`}
-          >{showDemo?'👁 Ocultar demo':'👁 Ver demo'}</button>
+          >{showDemo?'Ocultar demo':' Ver demo'}</button>
           <button onClick={fetchEmbarques} className="btn-secondary text-xs py-1">↻ Actualizar</button>
         </div>
       </div>
@@ -1006,7 +1007,7 @@ export default function Board() {
               return(
                 <div key={col.key} className="w-52 shrink-0">
                   <div className={`flex items-center justify-between mb-2 px-2 py-1.5 rounded-lg ${criticos>0?'bg-red-50':'bg-gray-50'}`}>
-                    <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">{col.icon} {col.label}</span>
+                    <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">{col.label}</span>
                     <div className="flex items-center gap-1">
                       {criticos>0&&<span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"/>}
                       <span className="text-[10px] bg-white text-gray-500 rounded-full px-1.5 border border-gray-200">{cards.length}</span>
