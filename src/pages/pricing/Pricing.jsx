@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -272,6 +271,9 @@ function TabCotizador() {
   const [form, setForm] = useState({ ruta:'', tipoUnidad:'Tráiler', tipoServicio:'FTL', peso:'', pallets:'', margen:25, urgente:false })
   const [resultado, setResultado] = useState(null)
   const [tarifas, setTarifas] = useState(TARIFAS_DEMO)
+  const [solicitandoAut, setSolicitandoAut] = useState(null)
+  const [justificacion, setJustificacion] = useState('')
+  const { perfil } = useAuth()
 
   useEffect(() => {
     getDocs(collection(db, 'tarifas')).then(snap => {
@@ -301,6 +303,27 @@ function TabCotizador() {
     }).sort((a,b) => a.costoBase - b.costoBase)
 
     setResultado({ opciones: resultados, ruta: form.ruta, margen: form.margen })
+  }
+
+  const solicitarAutorizacion = async (opcion) => {
+    try {
+      await addDoc(collection(db, 'autorizaciones'), {
+        tipo: 'margen_bajo',
+        estado: 'pendiente',
+        cliente: '(por definir)',
+        vendedor: perfil?.nombre || '',
+        ruta: form.ruta,
+        tipoUnidad: form.tipoUnidad,
+        costoProveedor: opcion.costoBase,
+        precioCliente: opcion.precioCliente,
+        margen: form.margen,
+        justificacion: justificacion,
+        creadoEn: serverTimestamp(),
+      })
+      setSolicitandoAut(null)
+      setJustificacion('')
+      alert('✅ Solicitud enviada al Gerente para autorización.')
+    } catch(e) { console.error(e) }
   }
 
   return (
@@ -339,7 +362,7 @@ function TabCotizador() {
           </div>
         </div>
         <button onClick={cotizar} disabled={!form.ruta} className="btn-primary w-full justify-center disabled:opacity-40">
-          Generar cotización
+          Calcular opciones
         </button>
       </div>
 
@@ -381,7 +404,31 @@ function TabCotizador() {
                     <p className={`text-sm font-bold ${i===0?'text-white':'text-brand'}`}>{fmt(o.precioCliente)}</p>
                   </div>
                 </div>
-              </div>
+                {/* Advertencia margen bajo */}
+                {form.margen < 20 && (
+                  <div className="mt-3">
+                    {solicitandoAut === i ? (
+                      <div className="space-y-2">
+                        <textarea className="input text-xs resize-none" rows={2} placeholder="Justificación para el Gerente..." value={justificacion} onChange={e=>setJustificacion(e.target.value)} />
+                        <div className="flex gap-2">
+                          <button onClick={()=>setSolicitandoAut(null)} className="flex-1 btn-secondary text-xs py-1.5">Cancelar</button>
+                          <button onClick={()=>solicitarAutorizacion(o)} disabled={!justificacion.trim()} className="flex-1 text-xs bg-amber-500 text-white py-1.5 rounded-lg hover:bg-amber-600 disabled:opacity-50">
+                            📨 Enviar al Gerente
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center justify-between">
+                        <p className="text-[10px] text-amber-700">⚠️ Margen {form.margen}% requiere autorización del Gerente</p>
+                        <button onClick={()=>setSolicitandoAut(i)} className="text-[10px] bg-amber-500 text-white px-2 py-1 rounded font-medium">
+                          Solicitar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                </div>
             ))}
           </div>
         )
@@ -468,6 +515,17 @@ function TabDisponibilidad({ rol }) {
   const set = (k,v) => setForm(f => ({...f, [k]: v}))
   const filtradas = filtro ? unidades.filter(u => u.origen.includes(filtro.toUpperCase()) || u.destino.includes(filtro.toUpperCase()) || u.tipoUnidad.toLowerCase().includes(filtro.toLowerCase())) : unidades
   const pendientes = solicitudes.filter(s => s.estado === 'pendiente').length
+  const solicitudesPendientes = solicitudes.filter(s => s.estado === 'pendiente')
+
+  const actualizarSolicitud = async (id, nuevoEstado) => {
+    try {
+      await updateDoc(doc(db, 'solicitudesUnidad', id), {
+        estado: nuevoEstado,
+        actualizadoEn: serverTimestamp(),
+      })
+      setSolicitudes(prev => prev.map(s => s.id === id ? {...s, estado: nuevoEstado} : s))
+    } catch(e) { console.error(e) }
+  }
 
   return (
     <div className="space-y-4">
@@ -496,7 +554,7 @@ function TabDisponibilidad({ rol }) {
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <p className="text-sm font-semibold text-amber-800 mb-3">⏳ Solicitudes pendientes de confirmar</p>
           <div className="space-y-2">
-            {solicitudes.filter(s=>s.estado==='pendiente').map(s => (
+            {solicitudesPendientes.map(s => (
               <div key={s.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-2.5 border border-amber-100">
                 <div>
                   <p className="text-xs font-medium text-gray-800">{s.origen} → {s.destino} · {s.tipoUnidad}</p>
@@ -504,8 +562,12 @@ function TabDisponibilidad({ rol }) {
                   {s.nota && <p className="text-[10px] text-amber-700 mt-0.5">Nota: {s.nota}</p>}
                 </div>
                 <div className="flex gap-2">
-                  <button className="text-[10px] bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">✓ Confirmar</button>
-                  <button className="text-[10px] bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-medium border border-red-200 hover:bg-red-100">✗ Rechazar</button>
+                  <button
+                    onClick={() => actualizarSolicitud(s.id, 'confirmado')}
+                    className="text-[10px] bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">✓ Confirmar</button>
+                  <button
+                    onClick={() => actualizarSolicitud(s.id, 'rechazado')}
+                    className="text-[10px] bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-medium border border-red-200 hover:bg-red-100">✗ Rechazar</button>
                 </div>
               </div>
             ))}
