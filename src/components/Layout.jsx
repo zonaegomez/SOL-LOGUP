@@ -15,6 +15,7 @@ const NAV = [
   { label: 'Usuarios', icon: '👤', path: '/admin/usuarios', roles: ['admin'] },
   { label: 'Clientes', icon: '🏢', path: '/admin/clientes', roles: ['admin'] },
   { label: 'Catálogos', icon: '📂', path: '/admin/catalogos', roles: ['admin'] },
+  { label: 'Importar maestro', icon: '📊', path: '/admin/importar', roles: ['admin'] },
 ]
 
 export default function Layout() {
