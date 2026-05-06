@@ -10,6 +10,7 @@ import DetalleEmbarque from './pages/ventas/DetalleEmbarque'
 import Usuarios from './pages/admin/Usuarios'
 import Catalogos from './pages/admin/Catalogos'
 import Clientes from './pages/admin/Clientes'
+import ImportarMaestro from './pages/admin/ImportarMaestro'
 import Board from './pages/operaciones/Board'
 import Pricing from './pages/pricing/Pricing'
 import Cotizaciones from './pages/ventas/Cotizaciones'
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/admin/usuarios" element={<Usuarios />} />
               <Route path="/admin/catalogos" element={<Catalogos />} />
               <Route path="/admin/clientes" element={<Clientes />} />
+              <Route path="/admin/importar" element={<ImportarMaestro />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
