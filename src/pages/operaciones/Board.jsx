@@ -660,7 +660,7 @@ function PanelDetalle({ em, onClose, onAvanzar, onCambiarEtapa }) {
                 </div>
                 {em._demo?(
                   <div className="bg-green-50 rounded-lg p-3 text-xs text-green-700">
-                    <p className="font-medium mb-1">Factura recibida · EXO TRANSPORT</p>
+                    <p className="font-medium mb-1">Factura recibida · LOG UP</p>
                     <p className="text-[10px] text-green-600">Ver factura · Eliminar</p>
                   </div>
                 ):(
