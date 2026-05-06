@@ -153,14 +153,54 @@ export default function NuevoEmbarque() {
               <div className="col-span-2">
                 <label className="block text-xs text-gray-500 mb-1">Cliente *</label>
                 {clientes.length > 0 ? (
-                  <select className="input" value={form.cliente} onChange={e => {
-                    const c = clientes.find(x => x.razonSocial === e.target.value)
-                    set('cliente', e.target.value)
-                    if (c) set('clienteRFC', c.rfc)
-                  }}>
-                    <option value="">Seleccionar cliente...</option>
-                    {clientes.map(c => <option key={c.id} value={c.razonSocial}>{c.razonSocial}</option>)}
-                  </select>
+                  <>
+                    <select className="input" value={form.cliente} onChange={e => {
+                      const c = clientes.find(x => x.razonSocial === e.target.value)
+                      set('cliente', e.target.value)
+                      if (c) {
+                        // Precargar todos los datos del cliente
+                        set('clienteRFC', c.rfc || '')
+                        set('clienteId', c.id || '')
+                        // Si tiene rutas pactadas, precargar la primera
+                        const ruta = (c.rutasPactadas || []).find(r => r.origen)
+                        if (ruta) {
+                          set('categoria', ruta.tipoServicio?.toLowerCase() || form.categoria)
+                          // Buscar ubicaciones por nombre
+                          const origen = ubicaciones.find(u => u.nombre?.toUpperCase().includes(ruta.origen?.toUpperCase()))
+                          const destino = ubicaciones.find(u => u.nombre?.toUpperCase().includes(ruta.destino?.toUpperCase()))
+                          if (origen) { set('origenId', origen.id); set('origenNombre', origen.nombre); set('origenCP', origen.cp) }
+                          if (destino) { set('destinoId', destino.id); set('destinoNombre', destino.nombre); set('destinoCP', destino.cp) }
+                          if (ruta.tipoUnidad) set('op_tipoUnidad', ruta.tipoUnidad)
+                        }
+                        // Temperatura si aplica
+                        if (c.requiereTemp) {
+                          set('cp_temp', c.tempMinF ? `${c.tempMinF}°F` : '')
+                        }
+                        // Notas del cliente
+                        if (c.notas) set('observaciones', c.notas)
+                      }
+                    }}>
+                      <option value="">Seleccionar cliente...</option>
+                      {clientes.map(c => <option key={c.id} value={c.razonSocial}>{c.razonSocial}{c.nombreComercial ? ` (${c.nombreComercial})` : ''}</option>)}
+                    </select>
+                    {/* Badge de datos precargados */}
+                    {form.clienteId && (() => {
+                      const c = clientes.find(x => x.id === form.clienteId)
+                      if (!c) return null
+                      return (
+                        <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 flex items-start gap-3 flex-wrap">
+                          {c.rfc && <span className="text-[10px] text-brand"><strong>RFC:</strong> {c.rfc}</span>}
+                          {c.contactoNombre && <span className="text-[10px] text-brand"><strong>Contacto:</strong> {c.contactoNombre} {c.contactoTel ? `· ${c.contactoTel}` : ''}</span>}
+                          {c.creditoDias && <span className="text-[10px] text-brand"><strong>Crédito:</strong> {c.creditoDias} días</span>}
+                          {c.requiereCTPAT && <span className="text-[10px] bg-brand text-white px-1.5 rounded">CTPAT</span>}
+                          {c.requiereTemp && <span className="text-[10px] bg-cyan-500 text-white px-1.5 rounded">❄️ {c.tempMinF}°F</span>}
+                          {(c.rutasPactadas||[]).filter(r=>r.origen).length > 0 && (
+                            <span className="text-[10px] text-brand"><strong>Rutas:</strong> {(c.rutasPactadas||[]).filter(r=>r.origen).map(r=>`${r.origen}→${r.destino}`).join(', ')}</span>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </>
                 ) : (
                   <input className="input" placeholder="Razón social del cliente" value={form.cliente} onChange={e => set('cliente', e.target.value)} />
                 )}
