@@ -96,7 +96,14 @@ export default function CotizadorInteligente() {
             distanciaKm: km,
             tiempoMin: Math.round(km / 65 * 60),
             distanciaTexto: `${km} km (estimado)`,
-            tiempoTexto: `${Math.round(km/65)}h aprox`,
+            tiempoTexto: `~${Math.round(km/65)}h tránsito`,
+          }
+        } else {
+          // Sin datos — dejar pasar igual
+          dist = {
+            distanciaKm: null,
+            distanciaTexto: 'Distancia pendiente',
+            tiempoTexto: 'Por confirmar',
           }
         }
       }
@@ -126,20 +133,25 @@ export default function CotizadorInteligente() {
         .slice(0,5)
       setCotizacionesHistoricas(historicas)
 
-      setPaso(2)
-    } catch(e) { console.error(e) }
+      setPaso(2) // Siempre avanzar
+    } catch(e) {
+      console.error(e)
+      setPaso(2) // Avanzar aunque falle
+    }
     finally { setCalculando(false) }
   }
 
   const generarCotizacion = () => {
-    if (!distancia && proveedoresSugeridos.length === 0) return
 
     const mejorProveedor = proveedoresSugeridos[0]
     const tarifaBase = mejorProveedor?.ruta?.tarifa
       ? Number(mejorProveedor.ruta.tarifa)
       : distancia?.distanciaKm
-        ? Math.round(distancia.distanciaKm * 15) // $15/km estimado
-        : 10000
+        ? Math.round(distancia.distanciaKm * 15)
+        : form.tipoCarga === 'Fronterizo' ? 18000
+        : form.tipoCarga === 'Congelado' ? 16000
+        : form.tipoCarga === 'Refrigerado' ? 14000
+        : 12000 // default seco
 
     // Ajustes por tipo de carga
     let multiplicador = 1
