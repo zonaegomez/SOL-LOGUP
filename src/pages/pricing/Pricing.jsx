@@ -222,7 +222,7 @@ function TabTarifas() {
               </select>
             </div>
             <div><label className="block text-xs text-gray-500 mb-1">Tarifa base (MXN) *</label><input type="number" className="input" placeholder="0.00" value={form.tarifa} onChange={e=>set('tarifa',e.target.value)} /></div>
-            <div><label className="block text-xs text-gray-500 mb-1">Surcharge combustible (%)</label><input type="number" className="input" value={form.combustible} onChange={e=>set('combustible',e.target.value)} /></div>
+
           </div>
           <div className="flex gap-2 justify-end">
             <button onClick={() => setShowForm(false)} className="btn-secondary text-xs py-1.5">Cancelar</button>
@@ -235,7 +235,7 @@ function TabTarifas() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
             <tr>
-              {['Proveedor','Ruta','Unidad','Servicio','Tarifa base','+ Combustible','Total',''].map(h => (
+              {['Proveedor','Ruta','Unidad','Servicio','Tarifa',''].map(h => (
                 <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
               ))}
             </tr>
@@ -257,9 +257,7 @@ function TabTarifas() {
                   <td className="px-4 py-3 text-xs text-gray-600">{t.ruta}</td>
                   <td className="px-4 py-3"><span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{t.tipoUnidad}</span></td>
                   <td className="px-4 py-3"><span className="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded">{t.tipoServicio}</span></td>
-                  <td className="px-4 py-3 text-xs font-medium text-gray-700">{fmt(t.tarifa)}</td>
-                  <td className="px-4 py-3 text-xs text-amber-600">+{fmt(comb)} ({t.combustible}%)</td>
-                  <td className="px-4 py-3 text-xs font-bold text-brand">{fmt(total)}</td>
+                  <td className="px-4 py-3 text-xs font-bold text-brand">{fmt(t.tarifa)}</td>
                   <td className="px-4 py-3">
                     {!t._demo && <button onClick={()=>solicitarAut({
                       tipo:'eliminar_tarifa',
@@ -305,8 +303,7 @@ function TabCotizador() {
     if(opciones.length === 0) { setResultado({ error: 'No hay tarifas registradas para esta combinación.' }); return }
 
     const resultados = opciones.map(t => {
-      const comb = t.tarifa * (t.combustible/100)
-      let costoBase = t.tarifa + comb
+      let costoBase = t.tarifa
       if(form.urgente) costoBase *= 1.15
       const margen = costoBase * (form.margen/100)
       const precioCliente = costoBase + margen
@@ -341,7 +338,11 @@ function TabCotizador() {
   return (
     <div className="space-y-4 max-w-2xl">
       <div className="card p-5 space-y-4">
-        <p className="text-sm font-semibold text-gray-700">Parámetros de cotización</p>
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2 mb-2">
+        <p className="text-xs font-medium text-brand">Cotizador interno — Solo visible para Pricing</p>
+        <p className="text-[10px] text-blue-500">Calcula el costo del proveedor. El margen de ganancia lo define Ventas con autorización del Gerente.</p>
+      </div>
+      <p className="text-sm font-semibold text-gray-700">Parámetros de cotización</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <label className="block text-xs text-gray-500 mb-1">Ruta *</label>
@@ -541,6 +542,32 @@ function TabDisponibilidad({ rol }) {
 
   return (
     <div className="space-y-4">
+      {/* Banner de flujo */}
+      <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
+        <div className="text-center">
+          <div className="w-8 h-8 bg-[#1a3672] text-white rounded-full flex items-center justify-center text-xs font-bold mx-auto mb-1">1</div>
+          <p className="text-xs font-semibold text-gray-700">Pricing publica</p>
+          <p className="text-[10px] text-gray-400">Registra unidades disponibles del día con tarifa del proveedor</p>
+        </div>
+        <div className="text-center">
+          <div className="w-8 h-8 bg-blue-100 text-brand rounded-full flex items-center justify-center text-xs font-bold mx-auto mb-1">2</div>
+          <p className="text-xs font-semibold text-gray-700">Ventas solicita</p>
+          <p className="text-[10px] text-gray-400">El vendedor ve las unidades y solicita la que necesita para su cliente</p>
+        </div>
+        <div className="text-center">
+          <div className="w-8 h-8 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center text-xs font-bold mx-auto mb-1">3</div>
+          <p className="text-xs font-semibold text-gray-700">Pricing confirma</p>
+          <p className="text-[10px] text-gray-400">Pricing confirma la tarifa y asigna el proveedor</p>
+        </div>
+        <div className="col-span-3 border-t border-gray-200 pt-3 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-[10px] font-bold">4</div>
+            <p className="text-xs font-semibold text-gray-700">Operaciones coordina y supervisa</p>
+            <p className="text-[10px] text-gray-400 ml-1">— Hoja de viaje, monitoreo y seguimiento hasta entrega</p>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
