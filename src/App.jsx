@@ -12,6 +12,7 @@ import Catalogos from './pages/admin/Catalogos'
 import Clientes from './pages/admin/Clientes'
 import ImportarMaestro from './pages/admin/ImportarMaestro'
 import Autorizaciones from './pages/gerencia/Autorizaciones'
+import Reportes from './pages/gerencia/Reportes'
 import Board from './pages/operaciones/Board'
 import Pricing from './pages/pricing/Pricing'
 import Cotizaciones from './pages/ventas/Cotizaciones'
@@ -37,6 +38,7 @@ export default function App() {
               <Route path="/admin/clientes" element={<Clientes />} />
               <Route path="/admin/importar" element={<ImportarMaestro />} />
               <Route path="/gerencia/autorizaciones" element={<Autorizaciones />} />
+              <Route path="/gerencia/reportes" element={<Reportes />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
