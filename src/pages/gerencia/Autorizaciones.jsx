@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, serverTimestamp, query, where, orderBy } from 'firebase/firestore'
+import { AlertTriangle, Lock, BarChart2, UserCog, FileText, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { db } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
 
 const TIPOS = {
-  'margen_bajo': { label: 'Margen por debajo del 20%', icon: '⚠️', color: 'bg-amber-50 border-amber-200 text-amber-800' },
-  'tarifa_pactada': { label: 'Cambio de tarifa pactada', icon: '🔒', color: 'bg-red-50 border-red-200 text-red-800' },
-  'descuento': { label: 'Descuento especial', icon: '💸', color: 'bg-blue-50 border-blue-200 text-brand' },
-  'cambio_rol': { label: 'Cambio de rol de usuario', icon: '👤', color: 'bg-purple-50 border-purple-200 text-purple-800' },
-  'otro': { label: 'Otro', icon: '📋', color: 'bg-gray-50 border-gray-200 text-gray-700' },
+  'margen_bajo':        { label: 'Margen bajo del 20%',     Icon: BarChart2,  color: 'bg-amber-50 border-amber-200 text-amber-800' },
+  'eliminar_embarque':  { label: 'Eliminar embarque',       Icon: FileText,   color: 'bg-red-50 border-red-200 text-red-800' },
+  'cancelar_embarque':  { label: 'Cancelar embarque',       Icon: XCircle,    color: 'bg-red-50 border-red-200 text-red-800' },
+  'tarifa_pactada':     { label: 'Cambio de tarifa',        Icon: Lock,       color: 'bg-red-50 border-red-200 text-red-800' },
+  'eliminar_tarifa':    { label: 'Eliminar tarifa',         Icon: Lock,       color: 'bg-red-50 border-red-200 text-red-800' },
+  'eliminar_proveedor': { label: 'Eliminar proveedor',      Icon: FileText,   color: 'bg-red-50 border-red-200 text-red-800' },
+  'cambio_rol':         { label: 'Cambio de rol',           Icon: UserCog,    color: 'bg-purple-50 border-purple-200 text-purple-800' },
+  'otro':               { label: 'Solicitud especial',      Icon: FileText,   color: 'bg-gray-50 border-gray-200 text-gray-700' },
 }
 
 const fmt = (n) => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 0 })
@@ -106,7 +110,7 @@ export default function Autorizaciones() {
       {/* Filtros */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         {[
-          { key: 'pendiente', label: '⏳ Pendientes' },
+          { key: 'pendiente', label: 'Pendientes' },
           { key: 'aprobado', label: '✅ Aprobadas' },
           { key: 'rechazado', label: '❌ Rechazadas' },
           { key: 'todas', label: 'Todas' },
@@ -137,15 +141,15 @@ export default function Autorizaciones() {
                   <div className="flex-1">
                     {/* Header */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium ${tipo.color}`}>
-                        {tipo.icon} {tipo.label}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium flex items-center gap-1 w-fit ${tipo.color}`}>
+                        {tipo.Icon && <tipo.Icon className="w-3 h-3" />} {tipo.label}
                       </span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                         aut.estado==='pendiente'?'bg-amber-100 text-amber-700':
                         aut.estado==='aprobado'?'bg-green-100 text-green-700':
                         'bg-red-100 text-red-600'
                       }`}>
-                        {aut.estado==='pendiente'?'⏳ Pendiente':aut.estado==='aprobado'?'✅ Aprobada':'❌ Rechazada'}
+                        {aut.estado==='pendiente'?'Pendiente':aut.estado==='aprobado'?'Aprobada':'Rechazada'}
                       </span>
                     </div>
 
@@ -188,11 +192,11 @@ export default function Autorizaciones() {
 
                     {/* Resultado */}
                     {aut.estado === 'aprobado' && (
-                      <p className="text-xs text-green-600">✅ Aprobada por {aut.autorizadoPor} · {aut.autorizadoEn?.toDate?.()?.toLocaleString('es-MX') || ''}</p>
+                      <p className="text-xs text-green-600">Aprobada por {aut.autorizadoPor} · {aut.autorizadoEn?.toDate?.()?.toLocaleString('es-MX') || ''}</p>
                     )}
                     {aut.estado === 'rechazado' && (
                       <div>
-                        <p className="text-xs text-red-500">❌ Rechazada por {aut.rechazadoPor}</p>
+                        <p className="text-xs text-red-500">Rechazada por {aut.rechazadoPor}</p>
                         {aut.motivoRechazo && <p className="text-xs text-red-400 mt-0.5">Motivo: {aut.motivoRechazo}</p>}
                       </div>
                     )}
@@ -216,11 +220,11 @@ export default function Autorizaciones() {
                     <div className="flex flex-col gap-2 shrink-0">
                       <button onClick={()=>aprobar(aut)} disabled={procesando===aut.id}
                         className="bg-green-500 text-white text-xs font-medium px-4 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 whitespace-nowrap">
-                        {procesando===aut.id?'...':'✓ Aprobar'}
+                        {procesando===aut.id?'...':'Aprobar'}
                       </button>
                       <button onClick={()=>{setShowRechazo(aut.id);setMotivoRechazo('')}}
                         className="bg-red-50 text-red-600 border border-red-200 text-xs font-medium px-4 py-2 rounded-lg hover:bg-red-100 whitespace-nowrap">
-                        ✗ Rechazar
+                        Rechazar
                       </button>
                     </div>
                   )}
