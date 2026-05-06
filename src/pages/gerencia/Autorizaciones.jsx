@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, query, where, orderBy } from 'firebase/firestore'
+import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, serverTimestamp, query, where, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
 
@@ -7,6 +7,7 @@ const TIPOS = {
   'margen_bajo': { label: 'Margen por debajo del 20%', icon: '⚠️', color: 'bg-amber-50 border-amber-200 text-amber-800' },
   'tarifa_pactada': { label: 'Cambio de tarifa pactada', icon: '🔒', color: 'bg-red-50 border-red-200 text-red-800' },
   'descuento': { label: 'Descuento especial', icon: '💸', color: 'bg-blue-50 border-blue-200 text-brand' },
+  'cambio_rol': { label: 'Cambio de rol de usuario', icon: '👤', color: 'bg-purple-50 border-purple-200 text-purple-800' },
   'otro': { label: 'Otro', icon: '📋', color: 'bg-gray-50 border-gray-200 text-gray-700' },
 }
 
@@ -43,6 +44,26 @@ export default function Autorizaciones() {
         autorizadoPor: perfil?.nombre || '',
         autorizadoEn: serverTimestamp(),
       })
+
+      const d = aut.datos || {}
+
+      // Ejecutar la acción automáticamente al aprobar
+      if (aut.tipo === 'cambio_rol' && aut.usuarioId && aut.rolNuevo) {
+        await updateDoc(doc(db, 'usuarios', aut.usuarioId), { rol: aut.rolNuevo, updatedAt: serverTimestamp() })
+      }
+      else if (aut.tipo === 'eliminar_embarque' && d.id) {
+        await deleteDoc(doc(db, 'embarques', d.id))
+      }
+      else if (aut.tipo === 'cancelar_embarque' && d.id) {
+        await updateDoc(doc(db, 'embarques', d.id), { etapa: 'cancelado', updatedAt: serverTimestamp() })
+      }
+      else if (aut.tipo === 'eliminar_tarifa' && d.id) {
+        await deleteDoc(doc(db, 'tarifas', d.id))
+      }
+      else if (aut.tipo === 'eliminar_proveedor' && d.id) {
+        await deleteDoc(doc(db, 'proveedores', d.id))
+      }
+
       fetchAutorizaciones()
     } catch(e) { console.error(e) }
     finally { setProcesando(null) }
@@ -132,8 +153,13 @@ export default function Autorizaciones() {
                     <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-3">
                       {aut.cliente && <div className="flex gap-2 text-xs"><span className="text-gray-400">Cliente</span><span className="font-medium text-gray-800">{aut.cliente}</span></div>}
                       {aut.vendedor && <div className="flex gap-2 text-xs"><span className="text-gray-400">Solicita</span><span className="font-medium text-gray-800">{aut.vendedor}</span></div>}
+                      {aut.solicitadoPor && <div className="flex gap-2 text-xs"><span className="text-gray-400">Solicita</span><span className="font-medium text-gray-800">{aut.solicitadoPor}</span></div>}
                       {aut.ruta && <div className="flex gap-2 text-xs"><span className="text-gray-400">Ruta</span><span className="font-medium text-gray-800">{aut.ruta}</span></div>}
                       {aut.tipoUnidad && <div className="flex gap-2 text-xs"><span className="text-gray-400">Unidad</span><span className="font-medium text-gray-800">{aut.tipoUnidad}</span></div>}
+                      {aut.usuarioNombre && <div className="flex gap-2 text-xs"><span className="text-gray-400">Usuario</span><span className="font-medium text-gray-800">{aut.usuarioNombre}</span></div>}
+                      {aut.rolActual && <div className="flex gap-2 text-xs"><span className="text-gray-400">Rol actual</span><span className="font-medium text-gray-800">{aut.rolActual}</span></div>}
+                      {aut.rolNuevo && <div className="flex gap-2 text-xs"><span className="text-gray-400">Rol nuevo</span><span className="font-bold text-purple-700">{aut.rolNuevo}</span></div>}
+                      {aut.descripcion && <div className="col-span-2 flex gap-2 text-xs"><span className="text-gray-400">Detalle</span><span className="font-medium text-gray-800">{aut.descripcion}</span></div>}
                     </div>
 
                     {/* Números */}
@@ -207,4 +233,3 @@ export default function Autorizaciones() {
     </div>
   )
 }
-
