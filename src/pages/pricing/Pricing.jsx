@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../context/AuthContext'
+import Proveedores from './Proveedores'
+import Disponibilidad from './Disponibilidad'
 import { useSolicitudAut } from '../../hooks/useSolicitudAut'
 
 const TABS = [
   { key: 'proveedores', label: 'Proveedores' },
+  { key: 'disponibilidad', label: 'Disponibilidad' },
   { key: 'tarifas', label: 'Tarifas por ruta' },
   { key: 'cotizador', label: 'Cotizador interno' },
-  { key: 'disponibilidad', label: 'Disponibilidad' },
 ]
 
 const TIPOS_UNIDAD = ['Tráiler', 'Caja seca', 'Caja refrigerada', 'Rabón', 'Tortón', 'Plataforma', 'Pipa']
@@ -530,13 +532,33 @@ function TabDisponibilidad({ rol }) {
   const pendientes = solicitudes.filter(s => s.estado === 'pendiente').length
   const solicitudesPendientes = solicitudes.filter(s => s.estado === 'pendiente')
 
-  const actualizarSolicitud = async (id, nuevoEstado) => {
+  const actualizarSolicitud = async (solicitudId, nuevoEstado) => {
     try {
-      await updateDoc(doc(db, 'solicitudesUnidad', id), {
+      await updateDoc(doc(db, 'solicitudesUnidad', solicitudId), {
         estado: nuevoEstado,
         actualizadoEn: serverTimestamp(),
+        confirmadoPor: nuevoEstado === 'confirmado' ? 'Pricing' : undefined,
       })
-      setSolicitudes(prev => prev.map(s => s.id === id ? {...s, estado: nuevoEstado} : s))
+      // Si confirma y tiene embarqueId → avanzar embarque a posicionamiento
+      if (nuevoEstado === 'confirmado') {
+        const sol = solicitudes.find(s => s.id === solicitudId)
+        if (sol?.embarqueId) {
+          const { doc: fsDoc, updateDoc: fsUpdate, addDoc, collection: fsCol } = await import('firebase/firestore')
+          await fsUpdate(fsDoc(db, 'embarques', sol.embarqueId), {
+            etapa: 'posicionamiento',
+            estadoUnidad: 'confirmado',
+            proveedor_nombre: sol.proveedor || '',
+            updatedAt: serverTimestamp(),
+          })
+          await addDoc(fsCol(db, 'embarques', sol.embarqueId, 'historico'), {
+            tipo: 'unidad_confirmada',
+            descripcion: `Unidad confirmada por Pricing: ${sol.tipoUnidad} ${sol.temperatura || ''}`,
+            usuario: 'Pricing',
+            timestamp: serverTimestamp(),
+          })
+        }
+      }
+      setSolicitudes(prev => prev.map(s => s.id === solicitudId ? {...s, estado: nuevoEstado} : s))
     } catch(e) { console.error(e) }
   }
 
@@ -745,10 +767,10 @@ export default function Pricing() {
         ))}
       </div>
 
-      {tab === 'proveedores' && <TabProveedores />}
+      {tab === 'proveedores' && <Proveedores />}
+      {tab === 'disponibilidad' && <Disponibilidad />}
       {tab === 'tarifas' && <TabTarifas />}
       {tab === 'cotizador' && <TabCotizador />}
-      {tab === 'disponibilidad' && <TabDisponibilidad />}
     </div>
   )
 }
