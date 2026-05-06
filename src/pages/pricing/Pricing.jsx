@@ -149,6 +149,8 @@ function TabProveedores() {
 
 // ─── TARIFAS ──────────────────────────────────────────────────────────────────
 function TabTarifas() {
+  const { perfil } = useAuth()
+  const { SolicitudModal, solicitarAut } = useSolicitudAut(perfil)
   const [tarifas, setTarifas] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -231,7 +233,7 @@ function TabTarifas() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
             <tr>
-              {['Proveedor','Ruta','Unidad','Servicio','Tarifa base','+ Combustible','Total'].map(h => (
+              {['Proveedor','Ruta','Unidad','Servicio','Tarifa base','+ Combustible','Total',''].map(h => (
                 <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
               ))}
             </tr>
@@ -256,12 +258,20 @@ function TabTarifas() {
                   <td className="px-4 py-3 text-xs font-medium text-gray-700">{fmt(t.tarifa)}</td>
                   <td className="px-4 py-3 text-xs text-amber-600">+{fmt(comb)} ({t.combustible}%)</td>
                   <td className="px-4 py-3 text-xs font-bold text-brand">{fmt(total)}</td>
+                  <td className="px-4 py-3">
+                    {!t._demo && <button onClick={()=>solicitarAut({
+                      tipo:'eliminar_tarifa',
+                      descripcion:`Eliminar tarifa: ${t.proveedor} - ${t.ruta}`,
+                      datos:{ id:t.id, proveedor:t.proveedor, ruta:t.ruta, tarifa:fmt(t.tarifa) },
+                    })} className="text-[10px] text-red-400 hover:text-red-600">🗑️</button>}
+                  </td>
                 </tr>
               )
             })}
           </tbody>
         </table>
       </div>
+      <SolicitudModal />
     </div>
   )
 }
