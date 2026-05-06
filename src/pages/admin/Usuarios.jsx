@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { db, auth } from '../../firebase'
+import { useAuth } from '../../context/AuthContext'
 
 const ROLES = ['admin', 'ventas', 'operaciones', 'pricing', 'proveedor']
 
@@ -21,6 +22,9 @@ export default function Usuarios() {
   const [form, setForm] = useState({ nombre: '', email: '', password: '', rol: 'ventas' })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [confirmEliminar, setConfirmEliminar] = useState(null)
+  const [textoConfirm, setTextoConfirm] = useState('')
+  const { esMaestro, esGerente, esAdmin, perfil } = useAuth()
 
   useEffect(() => { fetchUsuarios() }, [])
 
@@ -78,6 +82,17 @@ export default function Usuarios() {
       await updateDoc(doc(db, 'usuarios', usuario.id), { activo: !usuario.activo })
       fetchUsuarios()
     } catch(e) { console.error(e) }
+  }
+
+  const eliminarUsuario = async () => {
+    if (textoConfirm !== 'ELIMINAR') return
+    try {
+      await deleteDoc(doc(db, 'usuarios', confirmEliminar.id))
+      setMsg({ tipo: 'ok', texto: `✅ Usuario eliminado` })
+      setConfirmEliminar(null)
+      setTextoConfirm('')
+      fetchUsuarios()
+    } catch(e) { setMsg({ tipo: 'error', texto: 'Error al eliminar' }) }
   }
 
   return (
@@ -176,9 +191,15 @@ export default function Usuarios() {
                   {editando.activo ? '● Activo' : '○ Inactivo'}
                 </button>
               </div>
-              <div className="bg-blue-50 rounded-lg px-3 py-2 text-xs text-brand">
-                💡 El rol se aplica inmediatamente al próximo inicio de sesión del usuario.
-              </div>
+              {esGerente && !esMaestro && !esAdmin ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+                  ⚠️ Como Gerente, cambiar el rol requiere autorización del Maestro. Se enviará una solicitud.
+                </div>
+              ) : (
+                <div className="bg-blue-50 rounded-lg px-3 py-2 text-xs text-brand">
+                  💡 El rol se aplica inmediatamente al próximo inicio de sesión del usuario.
+                </div>
+              )}
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={() => setEditando(null)} className="flex-1 btn-secondary">Cancelar</button>
@@ -227,18 +248,34 @@ export default function Usuarios() {
                   </button>
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => { setEditando({ ...u }); setMsg(null) }}
-                    className="text-xs text-brand hover:underline font-medium"
-                  >
-                    ✏️ Editar
-                  </button>
+                  <div className="flex gap-3">
+                    <button onClick={() => { setEditando({ ...u }); setMsg(null) }} className="text-xs text-brand hover:underline font-medium">✏️ Editar</button>
+                    {(esMaestro || esGerente) && <button onClick={() => { setConfirmEliminar(u); setTextoConfirm('') }} className="text-xs text-red-400 hover:text-red-600 hover:underline font-medium">🗑️ Eliminar</button>}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Modal eliminar — solo Maestro */}
+      {confirmEliminar && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h2 className="text-base font-semibold text-red-600 mb-1">⚠️ Eliminar usuario</h2>
+            <p className="text-xs text-gray-500 mb-4">Esto eliminará permanentemente a <strong>{confirmEliminar.nombre || confirmEliminar.email}</strong>. Esta acción no se puede deshacer.</p>
+            <p className="text-xs text-gray-600 mb-2">Escribe <strong>ELIMINAR</strong> para confirmar:</p>
+            <input className="input mb-4" value={textoConfirm} onChange={e=>setTextoConfirm(e.target.value)} placeholder="ELIMINAR" />
+            <div className="flex gap-2">
+              <button onClick={()=>{setConfirmEliminar(null);setTextoConfirm('')}} className="flex-1 btn-secondary text-xs">Cancelar</button>
+              <button onClick={eliminarUsuario} disabled={textoConfirm !== 'ELIMINAR'} className="flex-1 text-xs bg-red-500 text-white py-2.5 rounded-lg hover:bg-red-600 disabled:opacity-40 font-medium">
+                Eliminar definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
         <p className="text-xs font-medium text-brand mb-1">💡 Roles del sistema</p>
