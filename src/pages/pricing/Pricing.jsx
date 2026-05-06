@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc } from 'firebase/firestore'
+import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { useAuth } from '../../context/AuthContext'
+import { useSolicitudAut } from '../../hooks/useSolicitudAut'
 
 const TABS = [
   { key: 'proveedores', label: 'Proveedores' },
