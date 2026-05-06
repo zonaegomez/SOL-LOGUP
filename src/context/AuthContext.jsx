@@ -6,7 +6,7 @@ import { auth, db } from '../firebase'
 const AuthContext = createContext(null)
 
 // UIDs del usuario maestro — oculto del sistema
-const MAESTRO_UIDS = ['c0moo99rvCCkl77ejJxz']
+const MAESTRO_UIDS = ['u1AcITp6w0RltW92NAVQQrTs0PC3']
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
