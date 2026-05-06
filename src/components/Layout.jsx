@@ -5,21 +5,22 @@ import { auth, db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { useState, useEffect } from 'react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
+import { LayoutDashboard, Truck, FileText, ClipboardList, DollarSign, Users, Building2, FolderOpen, Upload, CheckSquare, BarChart2 } from 'lucide-react'
 
 const NAV = [
-  { label: 'Dashboard', icon: '▦', path: '/dashboard', roles: ['admin','ventas','operaciones','pricing','gerente','maestro'] },
-  { label: 'Embarques', icon: '🚛', path: '/embarques', roles: ['admin','ventas','operaciones','maestro'] },
-  { label: 'Cotizaciones', icon: '📄', path: '/cotizaciones', roles: ['admin','ventas','maestro'] },
-  { label: 'Operaciones', icon: '📋', path: '/operaciones', roles: ['admin','operaciones','maestro'] },
-  { label: 'Pricing', icon: '💲', path: '/pricing', roles: ['admin','pricing','maestro'] },
+  { label: 'Dashboard',        Icon: LayoutDashboard, path: '/dashboard',                roles: ['admin','ventas','operaciones','pricing','gerente','maestro'] },
+  { label: 'Embarques',        Icon: Truck,           path: '/embarques',                roles: ['admin','ventas','operaciones','maestro'] },
+  { label: 'Cotizaciones',     Icon: FileText,        path: '/cotizaciones',             roles: ['admin','ventas','maestro'] },
+  { label: 'Operaciones',      Icon: ClipboardList,   path: '/operaciones',              roles: ['admin','operaciones','maestro'] },
+  { label: 'Pricing',          Icon: DollarSign,      path: '/pricing',                  roles: ['admin','pricing','maestro'] },
   { divider: true, label: 'Gerencia', roles: ['gerente','maestro'] },
-  { label: 'Autorizaciones', icon: '✅', path: '/gerencia/autorizaciones', roles: ['gerente','maestro'], badge: true },
-  { label: 'Reportes', icon: '📈', path: '/gerencia/reportes', roles: ['gerente','maestro'] },
+  { label: 'Autorizaciones',   Icon: CheckSquare,     path: '/gerencia/autorizaciones',  roles: ['gerente','maestro'], badge: true },
+  { label: 'Reportes',         Icon: BarChart2,       path: '/gerencia/reportes',        roles: ['gerente','maestro'] },
   { divider: true, label: 'Administración', roles: ['admin','maestro'] },
-  { label: 'Usuarios', icon: '👤', path: '/admin/usuarios', roles: ['admin','maestro'] },
-  { label: 'Clientes', icon: '🏢', path: '/admin/clientes', roles: ['admin','maestro'] },
-  { label: 'Catálogos', icon: '📂', path: '/admin/catalogos', roles: ['admin','maestro'] },
-  { label: 'Importar maestro', icon: '📊', path: '/admin/importar', roles: ['admin','maestro'] },
+  { label: 'Usuarios',         Icon: Users,           path: '/admin/usuarios',           roles: ['admin','maestro'] },
+  { label: 'Clientes',         Icon: Building2,       path: '/admin/clientes',           roles: ['admin','maestro'] },
+  { label: 'Catálogos',        Icon: FolderOpen,      path: '/admin/catalogos',          roles: ['admin','maestro'] },
+  { label: 'Importar maestro', Icon: Upload,          path: '/admin/importar',           roles: ['admin','maestro'] },
 ]
 
 export default function Layout() {
@@ -79,8 +80,8 @@ export default function Layout() {
                   }`
                 }
               >
-                <span className="text-base w-5 text-center shrink-0 relative">
-                  {item.icon}
+                <span className="w-5 flex items-center justify-center shrink-0 relative">
+                  {item.Icon && <item.Icon className="w-4 h-4" />}
                   {hasBadge && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
                       {autPendientes > 9 ? '9+' : autPendientes}
