@@ -3,10 +3,10 @@ import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc } from 'fi
 import { db } from '../../firebase'
 
 const TABS = [
-  { key: 'proveedores', label: 'Proveedores', icon: '🏢' },
-  { key: 'tarifas', label: 'Tarifas por ruta', icon: '🗺️' },
-  { key: 'cotizador', label: 'Cotizador interno', icon: '💲' },
-  { key: 'disponibilidad', label: 'Disponibilidad', icon: '📅' },
+  { key: 'proveedores', label: 'Proveedores' },
+  { key: 'tarifas', label: 'Tarifas por ruta' },
+  { key: 'cotizador', label: 'Cotizador interno' },
+  { key: 'disponibilidad', label: 'Disponibilidad' },
 ]
 
 const TIPOS_UNIDAD = ['Tráiler', 'Caja seca', 'Caja refrigerada', 'Rabón', 'Tortón', 'Plataforma', 'Pipa']
@@ -138,7 +138,7 @@ function TabProveedores() {
               {(p.unidades||[]).map(u => <span key={u} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{u}</span>)}
             </div>
             <div className="flex flex-wrap gap-1">
-              {(p.rutas||[]).map(r => <span key={r} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded">📍{r}</span>)}
+              {(p.rutas||[]).map(r => <span key={r} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{r}</span>)}
             </div>
           </div>
         ))}
@@ -263,7 +263,7 @@ function TabTarifas() {
                       tipo:'eliminar_tarifa',
                       descripcion:`Eliminar tarifa: ${t.proveedor} - ${t.ruta}`,
                       datos:{ id:t.id, proveedor:t.proveedor, ruta:t.ruta, tarifa:fmt(t.tarifa) },
-                    })} className="text-[10px] text-red-400 hover:text-red-600">🗑️</button>}
+                    })} className="text-[10px] text-red-400 hover:text-red-600"></button>}
                   </td>
                 </tr>
               )
@@ -332,7 +332,7 @@ function TabCotizador() {
       })
       setSolicitandoAut(null)
       setJustificacion('')
-      alert('✅ Solicitud enviada al Gerente para autorización.')
+      alert(' Solicitud enviada al Gerente para autorización.')
     } catch(e) { console.error(e) }
   }
 
@@ -367,7 +367,7 @@ function TabCotizador() {
           <div className="flex items-end pb-1">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.urgente} onChange={e=>set('urgente',e.target.checked)} className="w-4 h-4 accent-brand" />
-              <span className="text-xs text-gray-600">🔴 Servicio urgente (+15%)</span>
+              <span className="text-xs text-gray-600"> Servicio urgente (+15%)</span>
             </label>
           </div>
         </div>
@@ -393,7 +393,7 @@ function TabCotizador() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      {i===0 && <span className="text-[10px] bg-brand text-white px-2 py-0.5 rounded-full font-medium">⭐ Mejor precio</span>}
+                      {i===0 && <span className="text-[10px] bg-brand text-white px-2 py-0.5 rounded-full font-medium">Mejor precio</span>}
                       {o._demo && <span className="text-[9px] bg-amber-50 text-amber-600 px-1 rounded border border-amber-100">DEMO</span>}
                     </div>
                     <p className="text-sm font-semibold text-gray-800 mt-1">{o.proveedor}</p>
@@ -423,13 +423,13 @@ function TabCotizador() {
                         <div className="flex gap-2">
                           <button onClick={()=>setSolicitandoAut(null)} className="flex-1 btn-secondary text-xs py-1.5">Cancelar</button>
                           <button onClick={()=>solicitarAutorizacion(o)} disabled={!justificacion.trim()} className="flex-1 text-xs bg-amber-500 text-white py-1.5 rounded-lg hover:bg-amber-600 disabled:opacity-50">
-                            📨 Enviar al Gerente
+                             Enviar al Gerente
                           </button>
                         </div>
                       </div>
                     ) : (
                       <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center justify-between">
-                        <p className="text-[10px] text-amber-700">⚠️ Margen {form.margen}% requiere autorización del Gerente</p>
+                        <p className="text-[10px] text-amber-700"> Margen {form.margen}% requiere autorización del Gerente</p>
                         <button onClick={()=>setSolicitandoAut(i)} className="text-[10px] bg-amber-500 text-white px-2 py-1 rounded font-medium">
                           Solicitar
                         </button>
@@ -517,7 +517,7 @@ function TabDisponibilidad({ rol }) {
       })
       setModalSolicitud(null)
       setNotaMensaje('')
-      alert('✅ Solicitud enviada a Pricing. Recibirás confirmación pronto.')
+      alert(' Solicitud enviada a Pricing. Recibirás confirmación pronto.')
       fetchSolicitudes()
     } catch(e) { console.error(e) }
   }
@@ -574,10 +574,10 @@ function TabDisponibilidad({ rol }) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => actualizarSolicitud(s.id, 'confirmado')}
-                    className="text-[10px] bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">✓ Confirmar</button>
+                    className="text-[10px] bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">Confirmar</button>
                   <button
                     onClick={() => actualizarSolicitud(s.id, 'rechazado')}
-                    className="text-[10px] bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-medium border border-red-200 hover:bg-red-100">✗ Rechazar</button>
+                    className="text-[10px] bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-medium border border-red-200 hover:bg-red-100">Rechazar</button>
                 </div>
               </div>
             ))}
@@ -680,7 +680,7 @@ function TabDisponibilidad({ rol }) {
             <div className="flex gap-2">
               <button onClick={() => { setModalSolicitud(null); setNotaMensaje('') }} className="flex-1 btn-secondary text-xs py-2.5">Cancelar</button>
               <button onClick={() => solicitarUnidad(modalSolicitud)} className="flex-1 btn-primary text-xs py-2.5 justify-center">
-                📨 Enviar solicitud
+                Enviar solicitud
               </button>
             </div>
           </div>
@@ -711,7 +711,7 @@ export default function Pricing() {
               tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <span>{t.icon}</span> {t.label}
+            {t.label}
           </button>
         ))}
       </div>
