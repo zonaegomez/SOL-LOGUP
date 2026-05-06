@@ -13,6 +13,7 @@ const NAV = [
   { label: 'Pricing', icon: '💲', path: '/pricing', roles: ['admin','pricing'] },
   { divider: true, label: 'Administración', roles: ['admin'] },
   { label: 'Usuarios', icon: '👤', path: '/admin/usuarios', roles: ['admin'] },
+  { label: 'Clientes', icon: '🏢', path: '/admin/clientes', roles: ['admin'] },
   { label: 'Catálogos', icon: '📂', path: '/admin/catalogos', roles: ['admin'] },
 ]
 
