@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { collection, getDocs, doc, getDoc, setDoc, query, where, serverTimestamp, writeBatch, addDoc } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, serverTimestamp, writeBatch, addDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { Link } from 'react-router-dom'
@@ -45,6 +45,9 @@ function TablaSemanal({ rol }) {
   const [editandoMeta, setEditandoMeta] = useState(false)
   const [metaTemp, setMetaTemp] = useState({ semanal: '', diaria: '' })
   const [guardandoMeta, setGuardandoMeta] = useState(false)
+  const [editandoViaje, setEditandoViaje] = useState(null)
+  const [viajeEdit, setViajeEdit] = useState({})
+  const [guardandoViaje, setGuardandoViaje] = useState(false)
   const fileRef = useRef()
   const hoy = new Date()
   const esAdmin = rol === 'admin'
@@ -153,6 +156,31 @@ function TablaSemanal({ rol }) {
   const faltaMeta = Math.max(meta.semanal - totalSemana, 0)
   const diasRestantes = esSemanActual ? 7 - diasTranscurridos : 0
 
+  const guardarViaje = async () => {
+    if (!editandoViaje) return
+    setGuardandoViaje(true)
+    try {
+      await updateDoc(doc(db, 'viajesSemana', editandoViaje), {
+        ingresoMXN: Number(viajeEdit.ingresoMXN) || 0,
+        estatus: viajeEdit.estatus,
+        cliente: viajeEdit.cliente,
+        tipoServicio: viajeEdit.tipoServicio,
+        notas: viajeEdit.notas || '',
+      })
+      setEditandoViaje(null)
+      fetchViajes()
+    } catch(e) { console.error(e) }
+    finally { setGuardandoViaje(false) }
+  }
+
+  const eliminarViaje = async (id) => {
+    if (!window.confirm('¿Eliminar este viaje?')) return
+    try {
+      await deleteDoc(doc(db, 'viajesSemana', id))
+      fetchViajes()
+    } catch(e) { console.error(e) }
+  }
+
   const COLOR_DIA = (v, esFuturo) => {
     if (esFuturo) return 'bg-gray-50 text-gray-300'
     if (v === 0) return 'bg-gray-50 text-gray-400'
@@ -177,7 +205,7 @@ function TablaSemanal({ rol }) {
             {esAdmin && !editandoMeta && (
               <button onClick={() => { setMetaTemp({ semanal: meta.semanal, diaria: meta.diaria }); setEditandoMeta(true) }}
                 className="text-xs text-brand hover:underline border border-brand/20 px-2 py-1 rounded-lg">
-                ✏️ Editar meta
+                Editar meta
               </button>
             )}
             {/* Navegación semanas */}
@@ -189,7 +217,7 @@ function TablaSemanal({ rol }) {
             {/* Importar Excel */}
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
             <button onClick={() => fileRef.current?.click()} disabled={importando} className="btn-secondary text-xs py-1.5">
-              {importando ? '⏳...' : '📥 Importar Excel'}
+              {importando ? 'Cargando...' : 'Importar Excel'}
             </button>
           </div>
         </div>
@@ -288,7 +316,7 @@ function TablaSemanal({ rol }) {
           { label:'Proyección diaria', val:fmt(proyeccionDiaria), sub:`Meta: ${fmt(meta.diaria)}` },
           { label:'Proyección semanal', val:fmt(proyeccionSemanal), sub:`Meta: ${fmt(meta.semanal)}` },
           { label:'Avance vs meta', val:`${pctMeta.toFixed(1)}%`, sub: null, pct: pctMeta },
-          { label: faltaMeta===0?'Meta lograda 🎉':'Falta para meta', val: faltaMeta===0?'✅':fmt(faltaMeta), sub:`${totalViajes} viajes efectivos` },
+          { label: faltaMeta===0?'Meta lograda':'Falta para meta', val: faltaMeta===0?'Lograda':fmt(faltaMeta), sub:`${totalViajes} viajes efectivos` },
         ].map((s,i) => (
           <div key={i} className="card p-4">
             <p className="text-xs text-gray-400 mb-1">{s.label}</p>
@@ -316,17 +344,62 @@ function TablaSemanal({ rol }) {
               ))}
             </div>
           </div>
-          <div className="divide-y divide-gray-50 max-h-56 overflow-y-auto">
+          <div className="divide-y divide-gray-50 max-h-96 overflow-y-auto">
             {viajes.map(v => (
-              <div key={v.id} className="px-5 py-2.5 flex items-center gap-4 hover:bg-gray-50">
-                <div className={`w-2 h-2 rounded-full shrink-0 ${v.estatus==='Entregado'?'bg-green-400':v.estatus==='En tránsito'?'bg-amber-400':v.estatus==='Programado'?'bg-blue-400':'bg-red-300'}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-800 truncate">{v.cliente}</p>
-                  <p className="text-[10px] text-gray-400">{v.origen} → {v.destino} · {v.diaSemana}</p>
-                </div>
-                <span className="text-[10px] bg-blue-50 text-brand px-1.5 py-0.5 rounded shrink-0">{v.tipoServicio}</span>
-                <span className="text-xs font-bold text-gray-700 shrink-0 w-20 text-right">{v.ingresoMXN>0?fmt(v.ingresoMXN):'—'}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${v.estatus==='Entregado'?'bg-green-50 text-green-700':v.estatus==='En tránsito'?'bg-amber-50 text-amber-700':v.estatus==='Programado'?'bg-blue-50 text-brand':'bg-red-50 text-red-500'}`}>{v.estatus}</span>
+              <div key={v.id}>
+                {/* Fila normal */}
+                {editandoViaje !== v.id ? (
+                  <div className="px-5 py-2.5 flex items-center gap-4 hover:bg-gray-50 group">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${v.estatus==='Entregado'?'bg-green-400':v.estatus==='En tránsito'?'bg-amber-400':v.estatus==='Programado'?'bg-blue-400':'bg-red-300'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 truncate">{v.cliente}</p>
+                      <p className="text-[10px] text-gray-400">{v.origen} → {v.destino} · {v.diaSemana}</p>
+                    </div>
+                    <span className="text-[10px] bg-blue-50 text-brand px-1.5 py-0.5 rounded shrink-0">{v.tipoServicio}</span>
+                    <span className={`text-xs font-bold shrink-0 w-20 text-right ${v.ingresoMXN>0?'text-gray-700':'text-gray-300'}`}>
+                      {v.ingresoMXN>0?fmt(v.ingresoMXN):'—'}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${v.estatus==='Entregado'?'bg-green-50 text-green-700':v.estatus==='En tránsito'?'bg-amber-50 text-amber-700':v.estatus==='Programado'?'bg-blue-50 text-brand':'bg-red-50 text-red-500'}`}>
+                      {v.estatus}
+                    </span>
+                    <button
+                      onClick={() => { setEditandoViaje(v.id); setViajeEdit({ ingresoMXN: v.ingresoMXN, estatus: v.estatus, cliente: v.cliente, tipoServicio: v.tipoServicio, notas: v.notas||'' }) }}
+                      className="opacity-0 group-hover:opacity-100 text-[10px] text-brand hover:underline shrink-0 transition-opacity"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                ) : (
+                  /* Fila en edición */
+                  <div className="px-5 py-3 bg-blue-50 border-l-2 border-brand space-y-2">
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="col-span-2">
+                        <label className="block text-[10px] text-gray-500 mb-0.5">Cliente</label>
+                        <input className="input text-xs py-1" value={viajeEdit.cliente} onChange={e=>setViajeEdit(d=>({...d,cliente:e.target.value}))} />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-0.5">Ingreso MXN</label>
+                        <input type="number" className="input text-xs py-1" value={viajeEdit.ingresoMXN} onChange={e=>setViajeEdit(d=>({...d,ingresoMXN:e.target.value}))} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-0.5">Estatus</label>
+                        <select className="input text-xs py-1" value={viajeEdit.estatus} onChange={e=>setViajeEdit(d=>({...d,estatus:e.target.value}))}>
+                          <option>Programado</option>
+                          <option>En tránsito</option>
+                          <option>Entregado</option>
+                          <option>Cancelado</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={()=>eliminarViaje(v.id)} className="text-[10px] text-red-400 hover:text-red-600 px-2 py-1 rounded">Eliminar</button>
+                      <button onClick={()=>setEditandoViaje(null)} className="text-[10px] btn-secondary py-1 px-3">Cancelar</button>
+                      <button onClick={guardarViaje} disabled={guardandoViaje} className="text-[10px] btn-primary py-1 px-3">
+                        {guardandoViaje?'Guardando...':'Guardar'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
