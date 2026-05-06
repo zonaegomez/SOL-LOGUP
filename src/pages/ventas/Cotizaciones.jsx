@@ -457,15 +457,14 @@ function NuevaCotizacion({ onGuardado, onCancelar, vendedor }) {
 
 // ── Lista de cotizaciones ─────────────────────────────────────────────────────
 export default function Cotizaciones() {
-  const { perfil } = useAuth()
+  const { perfil, esMaestro, esGerente } = useAuth()
   const [cotizaciones, setCotizaciones] = useState([])
   const [loading, setLoading] = useState(true)
-  const [vista, setVista] = useState('lista') // lista | nueva
+  const [vista, setVista] = useState('lista')
   const [busqueda, setBusqueda] = useState('')
   const [vistaPrevia, setVistaPrevia] = useState(null)
   const [confirmEliminar, setConfirmEliminar] = useState(null)
   const [eliminando, setEliminando] = useState(false)
-  const { esMaestro, esGerente, perfil } = useAuth()
 
   useEffect(() => { fetchCotizaciones() }, [])
 
