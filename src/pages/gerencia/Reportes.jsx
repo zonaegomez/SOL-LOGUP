@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { useMoneda } from '../../context/MonedaContext'
 import { TrendingUp, TrendingDown, Truck, DollarSign, Users, Star, AlertTriangle, CheckCircle, Clock, BarChart2, Package, Target, Download, FileText, Table } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
-const fmt = (n) => '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:0})
 const pct = (a, b) => b ? ((a/b)*100).toFixed(1) + '%' : '0%'
 
 // Exportar a Excel
@@ -347,6 +347,7 @@ function KPICard({ titulo, valor, subtitulo, icono: Icono, color, trend, chart, 
 }
 
 export default function Reportes() {
+  const { fmt } = useMoneda()
   const [periodo, setPeriodo] = useState('semana') // semana | mes | año
   const [loading, setLoading] = useState(true)
   const [viajes, setViajes] = useState([])
