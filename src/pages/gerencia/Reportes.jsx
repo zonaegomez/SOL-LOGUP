@@ -114,8 +114,8 @@ function generarPDF(datos) {
 <!-- Header -->
 <div class="header">
   <div>
-    <div class="logo">LOG<span>UP</span></div>
-    <div class="subtitle">Logística y Servicios · Reporte Ejecutivo</div>
+    <img src="${window.location.origin}/logupcompleto.png" style="height:52px;object-fit:contain;" onerror="this.style.display='none'" />
+    <div class="subtitle" style="margin-top:4px;">Logística y Servicios · Reporte Ejecutivo</div>
   </div>
   <div class="fecha">
     <div style="font-size:13px;font-weight:bold;color:#1a3672;">Semana ${semanaActual} · 2026</div>
