@@ -70,9 +70,22 @@ function fmt(n,cur='MXN') {
   return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2})+' '+cur
 }
 
-// Genera la Carta de Instrucciones como ventana de impresión
+// Genera la Carta de Instrucciones para el PROVEEDOR
 function generarCartaPDF(em) {
   const eta = em.distanciaKm ? calcETA(em.distanciaKm) : '—'
+
+  // Régimen fiscal
+  const regimen = em.regimenFiscal || 'logistica' // flete | logistica | exento
+  const tarifaBase = Number(em.costo_proveedor || em.costo_flete || 0)
+  const iva = regimen === 'exento' ? 0 : tarifaBase * 0.16
+  const ret = regimen === 'flete' ? tarifaBase * 0.04 : 0
+  const total = tarifaBase + iva - ret
+
+  const fmtMXN = (n) => '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})
+  const regimenLabel = regimen === 'flete' ? 'Autotransporte de carga (IVA 16% - RET 4%)' 
+    : regimen === 'logistica' ? 'Servicio logístico (IVA 16%)'
+    : 'Exento de IVA (Tasa 0% / Exportación)'
+
   const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -80,168 +93,222 @@ function generarCartaPDF(em) {
 <title>Carta de Instrucciones ${em.folio}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 32px; }
-  .header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #1a56db; padding-bottom:16px; margin-bottom:20px; }
-  .logo { font-size:22px; font-weight:900; color:#1a56db; letter-spacing:-1px; }
-  .logo span { color:#1a1a1a; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 28px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #1a56db; padding-bottom:14px; margin-bottom:18px; }
   .folio { text-align:right; }
   .folio h2 { font-size:16px; font-weight:700; color:#1a1a1a; }
   .folio p { font-size:10px; color:#666; margin-top:2px; }
   .badge { display:inline-block; background:#1a56db; color:white; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; margin-top:4px; }
-  .section { margin-bottom:16px; }
+  .section { margin-bottom:14px; }
   .section-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#1a56db; border-bottom:1px solid #e5e7eb; padding-bottom:4px; margin-bottom:8px; }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-  .field { margin-bottom:4px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .field { margin-bottom:5px; }
   .label { font-size:9px; color:#888; text-transform:uppercase; letter-spacing:0.5px; }
   .value { font-size:11px; font-weight:600; color:#1a1a1a; margin-top:1px; }
-  .route-box { background:#f0f7ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-bottom:16px; }
+  .route-box { background:#f0f7ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-bottom:14px; }
   .route-inner { display:flex; align-items:center; gap:12px; }
   .route-point { flex:1; }
   .route-point .label { font-size:9px; color:#1a56db; }
-  .route-point .city { font-size:13px; font-weight:700; }
+  .route-point .city { font-size:14px; font-weight:700; }
   .route-point .cp { font-size:10px; color:#555; }
   .arrow { font-size:20px; color:#1a56db; }
-  .eta-box { text-align:center; background:#eff6ff; border-radius:6px; padding:8px 16px; }
+  .eta-box { text-align:center; background:#eff6ff; border-radius:6px; padding:8px 16px; min-width:80px; }
   .eta-box .num { font-size:18px; font-weight:900; color:#1a56db; }
   .eta-box .sub { font-size:9px; color:#555; }
-  table { width:100%; border-collapse:collapse; }
+  table { width:100%; border-collapse:collapse; margin-bottom:4px; }
   th { background:#f8fafc; font-size:9px; text-transform:uppercase; letter-spacing:0.5px; color:#666; padding:6px 8px; text-align:left; border:1px solid #e5e7eb; }
   td { padding:6px 8px; border:1px solid #e5e7eb; font-size:10px; }
-  .total-row td { background:#f0f7ff; font-weight:700; color:#1a56db; }
-  .alert-box { background:#fff7ed; border:1px solid #fed7aa; border-radius:6px; padding:10px 12px; }
-  .alert-box p { font-size:10px; color:#92400e; }
-  .footer { margin-top:24px; border-top:1px solid #e5e7eb; padding-top:12px; display:flex; justify-content:space-between; }
-  .sign-box { border-top:1px solid #1a1a1a; width:180px; text-align:center; padding-top:4px; font-size:9px; color:#888; margin-top:40px; }
+  td.monto { text-align:right; font-weight:600; }
+  .total-row td { background:#1a56db; color:white; font-weight:700; font-size:11px; }
+  .total-row td.monto { text-align:right; }
+  .subtotal-row td { background:#eff6ff; font-weight:600; color:#1a56db; }
+  .ret-row td { background:#fff7ed; color:#92400e; }
+  .alert-box { background:#fff7ed; border:1px solid #fed7aa; border-radius:6px; padding:10px 12px; margin-bottom:14px; }
+  .regimen-box { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:10px 12px; margin-bottom:14px; }
+  .firma-section { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:32px; }
+  .sign-box { border-top:1px solid #1a1a1a; text-align:center; padding-top:4px; font-size:9px; color:#888; }
+  .sign-label { font-size:10px; font-weight:700; color:#1a1a1a; margin-bottom:30px; }
+  .footer { margin-top:20px; border-top:1px solid #e5e7eb; padding-top:10px; display:flex; justify-content:space-between; font-size:9px; color:#aaa; }
   .chip { display:inline-block; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:600; background:#eff6ff; color:#1a56db; }
+  .aviso { background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 12px; margin-bottom:14px; font-size:10px; color:#991b1b; }
   @media print { body { padding:16px; } button { display:none; } }
 </style>
 </head>
 <body>
+
+<!-- Header -->
 <div class="header">
   <div>
     <img src="${window.location.origin}/logupcompleto.png" style="height:50px;object-fit:contain;" onerror="this.style.display='none'" />
-    <div style="font-size:10px;color:#666;margin-top:4px;">Sistema Operativo Logístico · Log Up</div>
-    <div style="font-size:9px;color:#aaa;margin-top:1px;">Generado: ${new Date().toLocaleString('es-MX')}</div>
+    <div style="font-size:10px;color:#666;margin-top:4px;">Logística y Servicios</div>
+    <div style="font-size:9px;color:#aaa;margin-top:1px;">RFC: LLS1407175E6 · Tel: (81) 1941-7135</div>
+    <div style="font-size:9px;color:#aaa;">Arco Víal Laredo-Saltillo KM 37.9, Apodaca, N.L.</div>
   </div>
   <div class="folio">
-    <div style="font-size:10px;color:#666;">CARTA DE INSTRUCCIONES DE EMBARQUE</div>
+    <div style="font-size:10px;color:#666;font-weight:700;">CARTA DE INSTRUCCIONES AL PROVEEDOR</div>
     <h2>${em.folio}</h2>
-    <div class="badge">${TIPO_LABEL[em.categoria]||em.categoria}</div>
+    <p>Generada: ${new Date().toLocaleString('es-MX')}</p>
+    <div class="badge">${TIPO_LABEL[em.categoria]||em.categoria||'—'}</div>
     ${em.prioridad==='urgente'?'<div style="display:inline-block;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-left:4px;">URGENTE</div>':''}
   </div>
 </div>
 
+<!-- Aviso importante -->
+<div class="aviso">
+  <strong>AVISO AL PROVEEDOR:</strong> Las tarifas indicadas en este documento son las acordadas y NO podrán modificarse una vez iniciado el servicio. 
+  Cualquier cargo adicional deberá ser autorizado por escrito por Log Up antes de realizarse.
+</div>
+
+<!-- Ruta -->
 <div class="route-box">
   <div class="route-inner">
     <div class="route-point">
-      <div class="label">Origen</div>
-      <div class="city">${em.origenNombre}</div>
-      <div class="cp">CP: ${em.origenCP||'—'}</div>
+      <div class="label">Origen / Punto de carga</div>
+      <div class="city">${em.origenNombre||'—'}</div>
+      <div class="cp">CP: ${em.origenCP||'—'} · ${em.lugarCarga||''}</div>
     </div>
     <div class="arrow">→</div>
     <div class="route-point">
-      <div class="label">Destino</div>
-      <div class="city">${em.destinoNombre}</div>
-      <div class="cp">CP: ${em.destinoCP||'—'}</div>
+      <div class="label">Destino / Punto de descarga</div>
+      <div class="city">${em.destinoNombre||'—'}</div>
+      <div class="cp">CP: ${em.destinoCP||'—'} · ${em.lugarDescarga||''}</div>
     </div>
-    ${em.distanciaKm?`<div class="eta-box"><div class="num">~${eta}h</div><div class="sub">${em.distanciaKm} km · factor trailer</div></div>`:''}
+    ${em.distanciaKm?`<div class="eta-box"><div class="num">~${eta}h</div><div class="sub">${em.distanciaKm} km</div></div>`:''}
   </div>
 </div>
 
+<!-- Dos columnas -->
 <div class="grid2">
 <div>
-<div class="section">
-  <div class="section-title">Datos del cliente</div>
-  <div class="field"><div class="label">Razón social</div><div class="value">${em.cliente||'—'}</div></div>
-  <div class="field"><div class="label">RFC</div><div class="value">${em.clienteRFC||'—'}</div></div>
-  <div class="field"><div class="label">Referencia del cliente</div><div class="value">${em.referencia||'—'}</div></div>
-</div>
-<div class="section">
-  <div class="section-title">Fechas</div>
-  <div class="field"><div class="label">Fecha y hora de carga</div><div class="value">${em.fechaCarga?new Date(em.fechaCarga).toLocaleString('es-MX'):'—'}</div></div>
-  <div class="field"><div class="label">ETA estimada</div><div class="value">${em.fechaETA?new Date(em.fechaETA).toLocaleString('es-MX'):'—'}</div></div>
-  <div class="field"><div class="label">Horas libres de carga</div><div class="value">${em.horasLibresCarga||6} hrs</div></div>
-  <div class="field"><div class="label">Horas libres de descarga</div><div class="value">${em.horasLibresDescarga||6} hrs</div></div>
-  <div class="field"><div class="label">Estadías (en exceso)</div><div class="value">Bloques de 12 hrs o fracción</div></div>
-</div>
+  <div class="section">
+    <div class="section-title">Datos del servicio</div>
+    <div class="field"><div class="label">Cliente (referencia interna)</div><div class="value">${em.cliente||'—'}</div></div>
+    <div class="field"><div class="label">Referencia / Pedido</div><div class="value">${em.referencia||'—'}</div></div>
+    <div class="field"><div class="label">Tipo de servicio</div><div class="value">${TIPO_LABEL[em.categoria]||em.categoria||'—'}</div></div>
+    ${em.cp_temp?`<div class="field"><div class="label">Temperatura requerida</div><div class="value" style="color:#1a56db;">${em.cp_temp}</div></div>`:''}
+  </div>
+  <div class="section">
+    <div class="section-title">Fechas y tiempos</div>
+    <div class="field"><div class="label">Fecha y hora de carga</div><div class="value">${em.fechaCarga?new Date(em.fechaCarga).toLocaleString('es-MX'):'—'}</div></div>
+    <div class="field"><div class="label">ETA a destino</div><div class="value">${em.fechaETA?new Date(em.fechaETA).toLocaleString('es-MX'):'—'}</div></div>
+    <div class="field"><div class="label">Horas libres carga</div><div class="value">${em.horasLibresCarga||6} hrs</div></div>
+    <div class="field"><div class="label">Horas libres descarga</div><div class="value">${em.horasLibresDescarga||6} hrs</div></div>
+    <div class="field"><div class="label">Estadías</div><div class="value">Bloques de 12 hrs o fracción</div></div>
+  </div>
 </div>
 <div>
-<div class="section">
-  <div class="section-title">Operador y unidad</div>
-  <div class="field"><div class="label">Operador</div><div class="value">${em.op_nombre||'Por asignar'}</div></div>
-  <div class="field"><div class="label">Licencia</div><div class="value">${em.op_licencia||'—'}</div></div>
-  <div class="field"><div class="label">Placas</div><div class="value">${em.op_placas||'—'}</div></div>
-  <div class="field"><div class="label">Tipo de unidad</div><div class="value">${UNIDAD_LABEL[em.op_tipoUnidad]||em.op_tipoUnidad||'—'}</div></div>
-</div>
-<div class="section">
-  <div class="section-title">Responsables</div>
-  <div class="field"><div class="label">Vendedor</div><div class="value">${em.vendedor||'—'}</div></div>
-  <div class="field"><div class="label">Seguimiento</div><div class="value">${em.seguimiento||'—'}</div></div>
-  <div class="field"><div class="label">Etapa actual</div><div class="value chip">${COLS.find(c=>c.key===em.etapa)?.label||em.etapa}</div></div>
-</div>
+  <div class="section">
+    <div class="section-title">Operador y unidad asignada</div>
+    <div class="field"><div class="label">Nombre del operador</div><div class="value">${em.op_nombre||'Por asignar'}</div></div>
+    <div class="field"><div class="label">Teléfono operador</div><div class="value">${em.op_tel||'—'}</div></div>
+    <div class="field"><div class="label">Placas tractor</div><div class="value">${em.placasTractor||em.op_placas||'—'}</div></div>
+    <div class="field"><div class="label">Económico tracto</div><div class="value">${em.economicoT||'—'}</div></div>
+    <div class="field"><div class="label">Económico caja</div><div class="value">${em.economicoC||'—'}</div></div>
+    <div class="field"><div class="label">Placas caja</div><div class="value">${em.op_placas||'—'}</div></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Contacto Log Up</div>
+    <div class="field"><div class="label">Ejecutivo de cuenta</div><div class="value">${em.vendedor||'—'}</div></div>
+    <div class="field"><div class="label">Operativo asignado</div><div class="value">${em.operativo||'—'}</div></div>
+    <div class="field"><div class="label">Tel. emergencias</div><div class="value">(81) 1941-7135</div></div>
+  </div>
 </div>
 </div>
 
+<!-- Mercancía -->
 <div class="section">
-  <div class="section-title">Complemento Carta Porte 3.1 — Mercancía</div>
+  <div class="section-title">Descripción de la mercancía</div>
   <table>
     <tr>
-      <th>Descripción</th><th>Clave SAT</th><th>Peso bruto</th><th>Unidad</th><th>Pallets</th><th>Valor mercancía</th><th>Seguro</th>
+      <th>Descripción</th><th>Clave SAT</th><th>Peso bruto (kg)</th><th>Unidad</th><th>Pallets</th><th>Valor declarado</th>
     </tr>
     <tr>
       <td>${em.cp_descripcion||'—'}</td>
       <td style="font-family:monospace">${em.cp_claveSAT||'—'}</td>
-      <td>${em.cp_peso?Number(em.cp_peso).toLocaleString('es-MX')+' kg':'—'}</td>
+      <td>${em.cp_peso?Number(em.cp_peso).toLocaleString('es-MX')+'kg':'—'}</td>
       <td>${em.cp_unidadPeso||'KGM'}</td>
       <td>${em.cp_pallets||'—'}</td>
-      <td>${em.cp_valorMercancia?fmt(em.cp_valorMercancia,em.cp_moneda):'—'}</td>
-      <td>${em.cp_seguro?fmt(em.cp_seguro):'—'}</td>
+      <td>${em.cp_valorMercancia?fmtMXN(em.cp_valorMercancia):'—'}</td>
     </tr>
   </table>
 </div>
 
-<div class="section">
-  <div class="section-title">Detalle de costos y tarifas</div>
-  <table>
-    <tr><th>Concepto</th><th>Detalle</th><th>Monto</th></tr>
-    <tr><td>Flete base</td><td>${em.origenNombre} → ${em.destinoNombre} · ${TIPO_LABEL[em.categoria]||''}</td><td>${fmt(em.costo_flete||0)}</td></tr>
-    <tr><td>Combustible (surcharge)</td><td>18% sobre flete base</td><td>${fmt((em.costo_flete||0)*0.18)}</td></tr>
-    ${em.costo_seguro?`<tr><td>Seguro de carga</td><td>Prima</td><td>${fmt(em.costo_seguro)}</td></tr>`:''}
-    ${em.costo_aduanal?`<tr><td>Honorarios agente aduanal</td><td></td><td>${fmt(em.costo_aduanal)}</td></tr>`:''}
-    ${em.costo_extra?`<tr><td>Cargos adicionales</td><td>${em.costo_extra_desc||''}</td><td>${fmt(em.costo_extra)}</td></tr>`:''}
-    <tr class="total-row"><td colspan="2"><strong>TOTAL ESTIMADO</strong></td><td><strong>${fmt((em.costo_flete||0)*1.18+(em.costo_seguro||0)+(em.costo_aduanal||0)+(em.costo_extra||0))}</strong></td></tr>
-  </table>
+<!-- Régimen fiscal -->
+<div class="regimen-box">
+  <strong style="font-size:10px;color:#166534;">Régimen fiscal aplicable:</strong>
+  <span style="font-size:10px;color:#166534;margin-left:6px;">${regimenLabel}</span>
 </div>
 
-${em.observaciones?`<div class="alert-box" style="margin-bottom:16px;"><div style="font-size:9px;font-weight:700;color:#92400e;margin-bottom:4px;"> INSTRUCCIONES ESPECIALES</div><p>${em.observaciones}</p></div>`:''}
+<!-- Costos y tarifas — para el proveedor -->
+<div class="section">
+  <div class="section-title">Tarifas acordadas — NO modificables sin autorización escrita</div>
+  <table>
+    <tr><th>Concepto</th><th>Descripción</th><th class="monto" style="text-align:right;">Monto</th></tr>
+    <tr>
+      <td><strong>Tarifa base de flete</strong></td>
+      <td>${em.origenNombre||'—'} → ${em.destinoNombre||'—'} · ${TIPO_LABEL[em.categoria]||''}</td>
+      <td class="monto">${fmtMXN(tarifaBase)}</td>
+    </tr>
+    ${em.costo_maniobras?`<tr><td>Maniobras</td><td>Carga / Descarga acordadas</td><td class="monto">${fmtMXN(em.costo_maniobras)}</td></tr>`:''}
+    ${em.costo_seguro?`<tr><td>Seguro de carga</td><td>Prima</td><td class="monto">${fmtMXN(em.costo_seguro)}</td></tr>`:''}
+    ${em.costo_extra?`<tr><td>Cargos adicionales</td><td>${em.costo_extra_desc||'Acordados'}</td><td class="monto">${fmtMXN(em.costo_extra)}</td></tr>`:''}
+    <tr class="subtotal-row">
+      <td colspan="2"><strong>Subtotal</strong></td>
+      <td class="monto">${fmtMXN(tarifaBase+(em.costo_maniobras||0)+(em.costo_seguro||0)+(em.costo_extra||0))}</td>
+    </tr>
+    ${regimen !== 'exento' ? `
+    <tr>
+      <td>IVA (16%)</td>
+      <td>Impuesto al Valor Agregado</td>
+      <td class="monto">${fmtMXN(iva)}</td>
+    </tr>` : `
+    <tr>
+      <td>IVA</td>
+      <td>Exento / Tasa 0%</td>
+      <td class="monto">$0.00</td>
+    </tr>`}
+    ${regimen === 'flete' ? `
+    <tr class="ret-row">
+      <td>Retención IVA (4%)</td>
+      <td>Autotransporte de carga federal</td>
+      <td class="monto">- ${fmtMXN(ret)}</td>
+    </tr>` : ''}
+    <tr class="total-row">
+      <td colspan="2"><strong>TOTAL A PAGAR AL PROVEEDOR</strong></td>
+      <td class="monto"><strong>${fmtMXN(total)}</strong></td>
+    </tr>
+  </table>
+  ${em.diasCreditoProveedor?`<div style="font-size:9px;color:#666;margin-top:6px;">Condiciones de pago: ${em.diasCreditoProveedor} días después de entrega con POD + factura completos.</div>`:''}
+</div>
+
+${em.observaciones?`<div class="alert-box"><div style="font-size:9px;font-weight:700;color:#92400e;margin-bottom:4px;">INSTRUCCIONES ESPECIALES</div><p>${em.observaciones}</p></div>`:''}
+
+<!-- Firmas — proveedor acepta condiciones -->
+<div class="firma-section">
+  <div>
+    <div class="sign-label">Proveedor / Transportista</div>
+    <div class="sign-box">Nombre, firma y sello — Acepta términos y tarifas</div>
+  </div>
+  <div>
+    <div class="sign-label">Autorizado Log Up</div>
+    <div class="sign-box">Nombre y firma — Ejecutivo de cuenta</div>
+  </div>
+</div>
 
 <div class="footer">
-  <div>
-    <div class="sign-box">Recibido por (cliente)</div>
-  </div>
-  <div>
-    <div class="sign-box">Operador / Transportista</div>
-  </div>
-  <div>
-    <div class="sign-box">Autorizado Log Up</div>
-  </div>
+  <div>Log Up Logística y Servicios · RFC: LLS1407175E6</div>
+  <div>Folio: ${em.folio} · ${new Date().toLocaleDateString('es-MX')}</div>
+  <div>Este documento es confidencial</div>
 </div>
 
-<div style="margin-top:16px;text-align:center;font-size:8px;color:#aaa;">
-  Este documento es informativo. Los tiempos de estadía generan cargos adicionales conforme a las condiciones pactadas con el cliente.<br>
-  Log Up · Sistema Operativo Logístico · ${new Date().toLocaleDateString('es-MX')}
-</div>
+<script>window.onload = () => { setTimeout(() => window.print(), 500) }</script>
+</body>
+</html>`
 
-<script>window.onload=()=>window.print()</script>
-</body></html>`
-
-  const ventana = window.open('','_blank','width=900,height=700')
+  const ventana = window.open('', '_blank', 'width=900,height=700')
   ventana.document.write(html)
   ventana.document.close()
 }
-
-
 // Genera la Hoja de Viaje como PNG descargable
 async function generarHojaViajePNG(em, extras = {}, setGenerando) {
   const {
