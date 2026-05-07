@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, serverTimestamp, writeBatch, addDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
+import { useMoneda } from '../context/MonedaContext'
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 
@@ -45,6 +46,7 @@ function TablaSemanal({ rol }) {
   const [editandoMeta, setEditandoMeta] = useState(false)
   const [metaTemp, setMetaTemp] = useState({ semanal: '', diaria: '' })
   const [guardandoMeta, setGuardandoMeta] = useState(false)
+  const { fmt } = useMoneda()
   const [editandoViaje, setEditandoViaje] = useState(null)
   const [viajeEdit, setViajeEdit] = useState({})
   const [guardandoViaje, setGuardandoViaje] = useState(false)
