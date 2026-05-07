@@ -4,6 +4,7 @@ import { auth, db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { useState, useEffect } from 'react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
+import { useMoneda } from '../context/MonedaContext'
 import { LayoutDashboard, Truck, FileText, ClipboardList, DollarSign, Users, Building2, FolderOpen, Upload, CheckSquare, BarChart2 } from 'lucide-react'
 
 const NAV = [
@@ -12,12 +13,9 @@ const NAV = [
   { label: 'Cotizaciones',     Icon: FileText,        path: '/cotizaciones',             roles: ['admin','ventas','maestro'] },
   { label: 'Operaciones',      Icon: ClipboardList,   path: '/operaciones',              roles: ['admin','operaciones','maestro'] },
   { label: 'Pricing',          Icon: DollarSign,      path: '/pricing',                  roles: ['admin','pricing','maestro'] },
-  { divider: true, label: 'Gerencia', roles: ['gerente','maestro'] },
-  { label: 'Autorizaciones',   Icon: CheckSquare,     path: '/gerencia/autorizaciones',  roles: ['gerente','maestro'], badge: true },
-  { label: 'Reportes',         Icon: BarChart2,       path: '/gerencia/reportes',        roles: ['gerente','maestro'] },
   { divider: true, label: 'Gerencia', roles: ['admin','gerente','maestro'] },
-{ label: 'Autorizaciones', Icon: CheckSquare, path: '/gerencia/autorizaciones', roles: ['admin','gerente','maestro'], badge: true },
-{ label: 'Reportes', Icon: BarChart2, path: '/gerencia/reportes', roles: ['admin','gerente','maestro'] },
+  { label: 'Autorizaciones',   Icon: CheckSquare,     path: '/gerencia/autorizaciones',  roles: ['admin','gerente','maestro'], badge: true },
+  { label: 'Reportes',         Icon: BarChart2,       path: '/gerencia/reportes',        roles: ['admin','gerente','maestro'] },
   { divider: true, label: 'Administración', roles: ['admin','maestro'] },
   { label: 'Usuarios',         Icon: Users,           path: '/admin/usuarios',           roles: ['admin','maestro'] },
   { label: 'Clientes',         Icon: Building2,       path: '/admin/clientes',           roles: ['admin','maestro'] },
@@ -27,6 +25,7 @@ const NAV = [
 
 export default function Layout() {
   const { perfil, user, esMaestro } = useAuth()
+  const { moneda, toggleMoneda, tipoCambio, setTipoCambio, tcBanxico, cargandoTC, fechaTC } = useMoneda()
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
   const [autPendientes, setAutPendientes] = useState(0)
@@ -138,7 +137,51 @@ export default function Layout() {
       {/* Main */}
       <main className="flex-1 overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 bg-white">
-          <div />
+          <div className="flex items-center gap-3">
+            {/* Toggle moneda */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleMoneda}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
+                  moneda === 'USD'
+                    ? 'border-green-500 bg-green-50 text-green-700'
+                    : 'border-brand bg-blue-50 text-brand'
+                }`}
+              >
+                <span>{moneda === 'MXN' ? '$' : '💵'} {moneda}</span>
+                <span className="text-[10px] opacity-60">→ {moneda === 'MXN' ? 'USD' : 'MXN'}</span>
+              </button>
+              {moneda === 'USD' && (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-gray-400">TC:</span>
+                    <input
+                      type="number"
+                      className="w-16 text-[10px] border border-gray-200 rounded px-1.5 py-1 text-center"
+                      value={tipoCambio}
+                      onChange={e => setTipoCambio(Number(e.target.value))}
+                      step="0.01"
+                    />
+                  </div>
+                  {tcBanxico && (
+                    <div className="text-[9px] text-gray-400 leading-tight">
+                      <div>BANXICO: ${tcBanxico.toFixed(2)}</div>
+                      <div className="text-gray-300">{fechaTC}</div>
+                    </div>
+                  )}
+                  {tcBanxico && Math.abs(tipoCambio - tcBanxico) > 0.01 && (
+                    <button
+                      onClick={() => setTipoCambio(tcBanxico)}
+                      className="text-[9px] text-brand hover:underline"
+                    >
+                      Usar BANXICO
+                    </button>
+                  )}
+                  {cargandoTC && <span className="text-[9px] text-gray-400">Consultando BANXICO...</span>}
+                </div>
+              )}
+            </div>
+          </div>
           <span className="text-xs text-gray-400">v1.0.0 <span className="inline-block w-2 h-2 rounded-full bg-green-400 ml-1" /></span>
         </div>
         <div className="p-6">
