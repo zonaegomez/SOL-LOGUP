@@ -27,9 +27,216 @@ function exportarCSV(datos, nombre) {
   link.click()
 }
 
-// Imprimir reporte
-function imprimirReporte() {
-  window.print()
+// Generar PDF ejecutivo con datos reales
+function generarPDF(datos) {
+  const { ingresosSemActual, META_SEMANAL, viajesEfectivos, viajesCancelados,
+    promedioViaje, avanceMeta, semanaActual, topClientes, tiposData,
+    ingresosPorSemana, proveedores, embarques } = datos
+
+  const fmt = (n) => '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:0})
+  const fecha = new Date().toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long', year:'numeric'})
+
+  // Gráfica de barras SVG inline
+  const maxIng = Math.max(...ingresosPorSemana.map(s=>s.value), 1)
+  const barras = ingresosPorSemana.map((s, i) => {
+    const h = Math.round((s.value / maxIng) * 80)
+    const x = 20 + i * 55
+    return `
+      <rect x="${x}" y="${100 - h}" width="35" height="${h}" fill="#1A56DB" rx="3" opacity="0.85"/>
+      <text x="${x+17}" y="115" text-anchor="middle" font-size="9" fill="#6B7280">${s.label}</text>
+      <text x="${x+17}" y="${95 - h}" text-anchor="middle" font-size="8" fill="#1A56DB" font-weight="bold">${s.value>0?fmt(s.value):''}</text>
+    `
+  }).join('')
+
+  // Pipeline de embarques
+  const etapas = [
+    {key:'creado',label:'Creado',color:'#9CA3AF'},
+    {key:'posicionamiento',label:'Posicionamiento',color:'#60A5FA'},
+    {key:'carga',label:'Carga',color:'#FBBF24'},
+    {key:'transito',label:'Tránsito',color:'#3B82F6'},
+    {key:'descarga',label:'Descarga',color:'#F97316'},
+    {key:'entregado',label:'Entregado',color:'#22C55E'},
+    {key:'porFacturar',label:'Por facturar',color:'#A855F7'},
+    {key:'cobrado',label:'Cobrado',color:'#16A34A'},
+  ]
+  const maxEmb = Math.max(...etapas.map(e => embarques.filter(em=>em.etapa===e.key).length), 1)
+  const barrasEmb = etapas.map((e, i) => {
+    const count = embarques.filter(em=>em.etapa===e.key).length
+    const w = Math.round((count / maxEmb) * 200)
+    return `
+      <g transform="translate(0, ${i * 22})">
+        <text x="0" y="14" font-size="9" fill="#374151">${e.label}</text>
+        <rect x="110" y="4" width="${w||2}" height="12" fill="${e.color}" rx="2"/>
+        <text x="${115 + w}" y="14" font-size="9" fill="#374151" font-weight="bold">${count}</text>
+      </g>
+    `
+  }).join('')
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte Ejecutivo — Log Up — Semana ${semanaActual}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 32px; }
+  .header { display:flex; justify-content:space-between; align-items:center; border-bottom: 3px solid #1a3672; padding-bottom: 16px; margin-bottom: 24px; }
+  .logo { font-size: 22px; font-weight: 900; color: #1a3672; }
+  .logo span { color: #374151; }
+  .subtitle { font-size: 10px; color: #6B7280; margin-top: 2px; }
+  .fecha { text-align:right; font-size:10px; color:#6B7280; }
+  .section-title { font-size: 12px; font-weight: bold; color: #1a3672; text-transform: uppercase; letter-spacing: 1px; margin: 24px 0 12px; border-bottom: 1px solid #E5E7EB; padding-bottom: 6px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .kpi-card { border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; }
+  .kpi-label { font-size: 9px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 20px; font-weight: 900; color: #1a3672; margin: 4px 0 2px; }
+  .kpi-sub { font-size: 9px; color: #9CA3AF; }
+  .kpi-alert { color: #DC2626; }
+  .kpi-ok { color: #16A34A; }
+  .meta-bar { background: #F3F4F6; border-radius: 100px; height: 12px; margin: 8px 0; overflow:hidden; }
+  .meta-fill { height: 12px; border-radius: 100px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  th { background: #1a3672; color: white; padding: 8px 10px; text-align: left; font-size: 10px; }
+  td { padding: 7px 10px; font-size: 10px; border-bottom: 1px solid #F3F4F6; }
+  tr:hover td { background: #F9FAFB; }
+  .tag { display:inline-block; padding: 2px 8px; border-radius: 100px; font-size: 9px; font-weight: bold; }
+  .tag-green { background: #DCFCE7; color: #166534; }
+  .tag-red { background: #FEE2E2; color: #991B1B; }
+  .tag-blue { background: #DBEAFE; color: #1E40AF; }
+  .footer { margin-top: 32px; border-top: 2px solid #1a3672; padding-top: 12px; display:flex; justify-content:space-between; color: #9CA3AF; font-size: 9px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .box { border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; }
+  @media print { body { padding: 16px; } }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <div class="logo">LOG<span>UP</span></div>
+    <div class="subtitle">Logística y Servicios · Reporte Ejecutivo</div>
+  </div>
+  <div class="fecha">
+    <div style="font-size:13px;font-weight:bold;color:#1a3672;">Semana ${semanaActual} · 2026</div>
+    <div>${fecha}</div>
+    <div style="margin-top:4px;">Viernes 01-May → Jueves 07-May</div>
+  </div>
+</div>
+
+<!-- KPIs principales -->
+<div class="section-title">Indicadores clave de desempeño</div>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Ingresos semana</div>
+    <div class="kpi-value">${fmt(ingresosSemActual)}</div>
+    <div class="kpi-sub">Meta: ${fmt(META_SEMANAL)}</div>
+    <div class="meta-bar"><div class="meta-fill" style="width:${avanceMeta}%;background:${avanceMeta>=100?'#16A34A':avanceMeta>=70?'#F59E0B':'#EF4444'}"></div></div>
+    <div style="font-size:9px;font-weight:bold;color:${avanceMeta>=70?'#16A34A':'#DC2626'}">${avanceMeta}% de la meta</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Viajes efectivos</div>
+    <div class="kpi-value kpi-ok">${viajesEfectivos}</div>
+    <div class="kpi-sub">${viajesCancelados} cancelados</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Ticket promedio</div>
+    <div class="kpi-value">${fmt(promedioViaje)}</div>
+    <div class="kpi-sub">por viaje efectivo</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Falta para meta</div>
+    <div class="kpi-value ${avanceMeta>=100?'kpi-ok':'kpi-alert'}">${avanceMeta>=100?'Lograda':fmt(META_SEMANAL-ingresosSemActual)}</div>
+    <div class="kpi-sub">${avanceMeta>=100?'Meta alcanzada':'Pendiente de facturar'}</div>
+  </div>
+</div>
+
+<!-- Gráfica ingresos por semana -->
+<div class="section-title">Tendencia de ingresos — Últimas 6 semanas</div>
+<svg viewBox="0 0 380 125" style="width:100%;height:130px;border:1px solid #F3F4F6;border-radius:8px;padding:10px;background:#FAFAFA;">
+  <line x1="15" y1="5" x2="15" y2="100" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="15" y1="100" x2="370" y2="100" stroke="#E5E7EB" stroke-width="1"/>
+  ${barras}
+</svg>
+
+<!-- Dos columnas: Top clientes + Pipeline -->
+<div class="two-col" style="margin-top:24px;">
+  <!-- Top clientes -->
+  <div class="box">
+    <div style="font-size:11px;font-weight:bold;color:#1a3672;margin-bottom:12px;">Top clientes por ingresos</div>
+    ${topClientes.length === 0 ? '<p style="color:#9CA3AF;font-size:10px;">Sin datos disponibles</p>' :
+      topClientes.map(([nombre, ing], i) => `
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+            <span style="font-size:10px;color:#374151;">${i+1}. ${nombre.length>25?nombre.slice(0,25)+'...':nombre}</span>
+            <span style="font-size:10px;font-weight:bold;color:#1a3672;">${fmt(ing)}</span>
+          </div>
+          <div style="background:#F3F4F6;border-radius:100px;height:6px;">
+            <div style="background:#1A56DB;height:6px;border-radius:100px;width:${Math.round((ing/topClientes[0][1])*100)}%"></div>
+          </div>
+        </div>
+      `).join('')
+    }
+  </div>
+
+  <!-- Pipeline embarques -->
+  <div class="box">
+    <div style="font-size:11px;font-weight:bold;color:#1a3672;margin-bottom:12px;">Pipeline de embarques</div>
+    <svg viewBox="0 0 320 ${etapas.length * 22 + 10}" style="width:100%;">
+      ${barrasEmb}
+    </svg>
+  </div>
+</div>
+
+<!-- Tabla viajes por día -->
+<div class="section-title" style="margin-top:24px;">Detalle de operación por día</div>
+<table>
+  <thead>
+    <tr>
+      <th>Día</th><th>Viajes efectivos</th><th>Ingresos</th><th>Cancelados</th><th>Promedio/viaje</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${['Viernes','Sábado','Domingo','Lunes','Martes','Miércoles','Jueves'].map(dia => {
+      const dViajes = datos.viajesSemActual.filter(v=>v.diaSemana===dia)
+      const dEfect = dViajes.filter(v=>['Entregado','En tránsito'].includes(v.estatus))
+      const dCancel = dViajes.filter(v=>v.estatus==='Cancelado').length
+      const dIng = dEfect.reduce((s,v)=>s+(Number(v.ingresoMXN)||0),0)
+      const dProm = dEfect.length ? Math.round(dIng/dEfect.length) : 0
+      return `<tr>
+        <td><strong>${dia}</strong></td>
+        <td><span class="tag tag-blue">${dEfect.length}</span></td>
+        <td><strong>${dIng>0?fmt(dIng):'—'}</strong></td>
+        <td>${dCancel>0?`<span class="tag tag-red">${dCancel}</span>`:'<span style="color:#9CA3AF">0</span>'}</td>
+        <td>${dProm>0?fmt(dProm):'—'}</td>
+      </tr>`
+    }).join('')}
+  </tbody>
+  <tfoot>
+    <tr style="background:#F8FAFC;">
+      <td><strong>TOTAL</strong></td>
+      <td><strong>${viajesEfectivos}</strong></td>
+      <td><strong style="color:#1a3672;">${fmt(ingresosSemActual)}</strong></td>
+      <td><strong style="color:#DC2626;">${viajesCancelados}</strong></td>
+      <td><strong>${fmt(promedioViaje)}</strong></td>
+    </tr>
+  </tfoot>
+</table>
+
+<!-- Footer -->
+<div class="footer">
+  <div>SOL — Sistema Operativo Logístico · Log Up Logística y Servicios</div>
+  <div>Generado el ${fecha} · Confidencial</div>
+  <div>Semana ${semanaActual} · 2026</div>
+</div>
+
+<script>window.onload = () => window.print()</script>
+</body>
+</html>`
+
+  const ventana = window.open('', '_blank', 'width=900,height=700')
+  ventana.document.write(html)
+  ventana.document.close()
 }
 
 const SEMANAS = ['Sem 13','Sem 14','Sem 15','Sem 16','Sem 17','Sem 18']
@@ -274,9 +481,13 @@ export default function Reportes() {
               className="btn-secondary text-xs py-1.5 flex items-center gap-1.5">
               <Download className="w-3.5 h-3.5" /> CSV
             </button>
-            <button onClick={imprimirReporte}
-              className="btn-secondary text-xs py-1.5 flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5" /> Imprimir
+            <button onClick={() => generarPDF({
+                ingresosSemActual, META_SEMANAL, viajesEfectivos, viajesCancelados,
+                promedioViaje, avanceMeta, semanaActual, topClientes, tiposData,
+                ingresosPorSemana, proveedores, embarques, viajesSemActual
+              })}
+              className="btn-primary text-xs py-1.5 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" /> Reporte PDF
             </button>
           </div>
         </div>
