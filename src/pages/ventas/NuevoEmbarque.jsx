@@ -232,6 +232,21 @@ export default function NuevoEmbarque() {
                 <input className="input" value={form.vendedor} onChange={e => set('vendedor', e.target.value)} />
               </div>
               <div>
+                <label className="block text-xs text-gray-500 mb-1">Régimen fiscal del servicio</label>
+                <select className="input" value={form.regimenFiscal||'logistica'} onChange={e => set('regimenFiscal', e.target.value)}>
+                  <option value="logistica">Servicio logístico — Solo IVA 16%</option>
+                  <option value="flete">Autotransporte de carga — IVA 16% - RET 4%</option>
+                  <option value="exento">Exento / Exportación — Tasa 0%</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Moneda</label>
+                <select className="input" value={form.moneda||'MXN'} onChange={e => set('moneda', e.target.value)}>
+                  <option value="MXN">MXN — Peso mexicano</option>
+                  <option value="USD">USD — Dólar americano</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-xs text-gray-500 mb-1">Responsable de seguimiento</label>
                 <input className="input" placeholder="correo@logup.mx" value={form.seguimiento} onChange={e => set('seguimiento', e.target.value)} />
               </div>
