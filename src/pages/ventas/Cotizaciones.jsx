@@ -322,70 +322,10 @@ function NuevaCotizacion({ onGuardado, onCancelar, vendedor }) {
           {saving ? 'Guardando...' : 'Guardar cotización'}
         </button>
       </div>
-      {/* Modal Vista Previa */}
-      {vistaPrevia && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{vistaPrevia.numero}</p>
-                <p className="text-xs text-gray-400">{vistaPrevia.empresa}</p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => generarCotizacionPDF(vistaPrevia, { nombre: vistaPrevia.vendedorNombre, email: vistaPrevia.vendedorEmail })} className="btn-primary text-xs py-1.5">Imprimir / PDF</button>
-                <button onClick={() => setVistaPrevia(null)} className="btn-secondary text-xs py-1.5">Cerrar</button>
-              </div>
-            </div>
-            <div className="overflow-y-auto flex-1 p-6 text-xs space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div><span className="text-gray-400">Empresa: </span><strong>{vistaPrevia.empresa}</strong></div>
-                <div><span className="text-gray-400">Contacto: </span><strong>{vistaPrevia.contacto}</strong></div>
-                <div><span className="text-gray-400">Unidad: </span><strong>{vistaPrevia.tipoUnidad}</strong></div>
-                <div><span className="text-gray-400">Fecha: </span><strong>{vistaPrevia.fecha ? new Date(vistaPrevia.fecha).toLocaleDateString('es-MX') : '—'}</strong></div>
-              </div>
-              <table className="w-full border-collapse text-xs">
-                <thead><tr className="bg-gray-900 text-white"><th className="text-left px-3 py-2">Ruta</th><th className="text-right px-3 py-2">Precio</th></tr></thead>
-                <tbody>
-                  {(vistaPrevia.rutas||[]).filter(r=>r.descripcion).map((r,i)=>(
-                    <tr key={i} className="border-b border-gray-100">
-                      <td className="px-3 py-1.5">{r.descripcion}</td>
-                      <td className="px-3 py-1.5 text-right font-medium">{r.precio?'$'+Number(r.precio).toLocaleString('es-MX'):''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {vistaPrevia.notas?.length > 0 && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="font-medium mb-1">Notas:</p>
-                  {vistaPrevia.notas.map((n,i)=><p key={i} className="text-gray-600">• {n}</p>)}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Eliminar */}
-      {confirmEliminar && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h2 className="text-base font-semibold text-red-600 mb-2">Eliminar cotización</h2>
-            <p className="text-xs text-gray-500 mb-1">Número: <strong>{confirmEliminar.numero}</strong></p>
-            <p className="text-xs text-gray-500 mb-4">Empresa: <strong>{confirmEliminar.empresa}</strong></p>
-            <div className="flex gap-2">
-              <button onClick={() => setConfirmEliminar(null)} className="flex-1 btn-secondary text-xs">Cancelar</button>
-              <button onClick={eliminarCotizacion} disabled={eliminando} className="flex-1 text-xs bg-red-500 text-white py-2.5 rounded-lg hover:bg-red-600 disabled:opacity-50 font-medium">
-                {eliminando ? 'Eliminando...' : 'Eliminar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
-// ── Lista de cotizaciones ─────────────────────────────────────────────────────
 export default function Cotizaciones() {
   const { perfil, esMaestro, esGerente } = useAuth()
   const [cotizaciones, setCotizaciones] = useState([])
@@ -497,6 +437,66 @@ export default function Cotizaciones() {
           </table>
         )}
       </div>
+
+      {/* Modal Vista Previa */}
+      {vistaPrevia && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{vistaPrevia.numero}</p>
+                <p className="text-xs text-gray-400">{vistaPrevia.empresa}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => generarCotizacionPDF(vistaPrevia, { nombre: vistaPrevia.vendedorNombre, email: vistaPrevia.vendedorEmail })} className="btn-primary text-xs py-1.5">Imprimir / PDF</button>
+                <button onClick={() => setVistaPrevia(null)} className="btn-secondary text-xs py-1.5">Cerrar</button>
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1 p-6 text-xs space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div><span className="text-gray-400">Empresa: </span><strong>{vistaPrevia.empresa}</strong></div>
+                <div><span className="text-gray-400">Contacto: </span><strong>{vistaPrevia.contacto}</strong></div>
+                <div><span className="text-gray-400">Unidad: </span><strong>{vistaPrevia.tipoUnidad}</strong></div>
+                <div><span className="text-gray-400">Fecha: </span><strong>{vistaPrevia.fecha ? new Date(vistaPrevia.fecha).toLocaleDateString('es-MX') : '—'}</strong></div>
+              </div>
+              <table className="w-full border-collapse">
+                <thead><tr className="bg-gray-900 text-white"><th className="text-left px-3 py-2">Ruta / Descripción</th><th className="text-right px-3 py-2">Precio</th></tr></thead>
+                <tbody>
+                  {(vistaPrevia.rutas||[]).filter(r=>r.descripcion).map((r,i)=>(
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="px-3 py-2">{r.descripcion}</td>
+                      <td className="px-3 py-2 text-right font-bold text-brand">{r.precio?'$'+Number(r.precio).toLocaleString('es-MX'):''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {(vistaPrevia.notas||[]).length > 0 && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="font-semibold mb-1">Notas:</p>
+                  {vistaPrevia.notas.map((n,i) => <p key={i} className="text-gray-600">• {n}</p>)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Eliminar */}
+      {confirmEliminar && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h2 className="text-base font-semibold text-red-600 mb-2">Eliminar cotización</h2>
+            <p className="text-xs text-gray-500 mb-1">Número: <strong>{confirmEliminar.numero}</strong></p>
+            <p className="text-xs text-gray-500 mb-4">Empresa: <strong>{confirmEliminar.empresa}</strong></p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmEliminar(null)} className="flex-1 btn-secondary text-xs">Cancelar</button>
+              <button onClick={eliminarCotizacion} disabled={eliminando} className="flex-1 text-xs bg-red-500 text-white py-2.5 rounded-lg hover:bg-red-600 disabled:opacity-50 font-medium">
+                {eliminando ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
