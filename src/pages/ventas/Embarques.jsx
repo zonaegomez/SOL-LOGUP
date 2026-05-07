@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useAuth } from '../../context/AuthContext'
+import { useMoneda } from '../../context/MonedaContext'
 import { useSolicitudAut } from '../../hooks/useSolicitudAut'
 
 const TIPO_TAG = { ftl: 'FTL', ltl: 'LTL', int: 'Internacional', ref: 'Refrigerado', exp: 'Exportación' }
@@ -18,7 +19,24 @@ const TIPO_COLOR = {
 
 export default function Embarques() {
   const [embarques, setEmbarques] = useState([])
-  const { perfil, esMaestro, esGerente } = useAuth()
+  const { perfil, esMaestro, esGerente, esAdmin } = useAuth()
+  const { fmt } = useMoneda()
+  const [clientesAsignados, setClientesAsignados] = useState([])
+
+  useEffect(() => {
+    // Cargar clientes asignados al usuario actual
+    if (!esMaestro && !esAdmin && perfil) {
+      getDocs(collection(db, 'clientes')).then(snap => {
+        const uid = perfil?.uid || ''
+        const nombre = perfil?.nombre || ''
+        const asignados = snap.docs
+          .map(d => d.data())
+          .filter(c => c.vendedorId === uid || c.operativoId === uid || c.vendedorNombre === nombre || c.operativoNombre === nombre)
+          .map(c => c.razonSocial)
+        setClientesAsignados(asignados)
+      }).catch(() => {})
+    }
+  }, [perfil])
   const { SolicitudModal, solicitarAut } = useSolicitudAut(perfil)
   const [filtrados, setFiltrados] = useState([])
   const [busqueda, setBusqueda] = useState('')
