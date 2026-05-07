@@ -322,7 +322,7 @@ function NuevaCotizacion({ onGuardado, onCancelar, vendedor }) {
           {saving ? 'Guardando...' : 'Guardar cotización'}
         </button>
       </div>
-      {/* Modal vista previa */}
+      {/* Modal Vista Previa */}
       {vistaPrevia && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
@@ -332,116 +332,46 @@ function NuevaCotizacion({ onGuardado, onCancelar, vendedor }) {
                 <p className="text-xs text-gray-400">{vistaPrevia.empresa}</p>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => generarCotizacionPDF(vistaPrevia, { nombre: vistaPrevia.vendedorNombre, email: vistaPrevia.vendedorEmail })}
-                  className="btn-primary text-xs py-1.5"
-                >
-                  Imprimir / Descargar PDF
-                </button>
+                <button onClick={() => generarCotizacionPDF(vistaPrevia, { nombre: vistaPrevia.vendedorNombre, email: vistaPrevia.vendedorEmail })} className="btn-primary text-xs py-1.5">Imprimir / PDF</button>
                 <button onClick={() => setVistaPrevia(null)} className="btn-secondary text-xs py-1.5">Cerrar</button>
               </div>
             </div>
-            <div className="overflow-y-auto flex-1 p-6">
-              {/* Vista previa de la cotización */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden text-xs font-sans">
-                {/* Header */}
-                <div className="flex border-b border-gray-300">
-                  <div className="w-1/3 border-r border-gray-300 p-4 flex items-center justify-center">
-                    <img src="/logupcompleto.png" alt="Log Up" className="h-12 object-contain" />
-                  </div>
-                  <div className="flex-1 p-4 flex items-center justify-center">
-                    <p className="text-base font-bold tracking-widest">COTIZACIÓN</p>
-                  </div>
-                  <div className="w-1/3 border-l border-gray-300 p-3 text-[10px] space-y-0.5">
-                    <div className="flex justify-between"><span className="text-gray-400">Clave:</span><span>09FRQQ1855</span></div>
-                    <div className="flex justify-between"><span className="text-gray-400">Revisión:</span><span>1</span></div>
-                    <div className="flex justify-between"><span className="text-gray-400">Fecha rev.:</span><span>01-Feb-2019</span></div>
-                    <div className="flex justify-between"><span className="text-gray-400">Emisión:</span><span>03-Jul-2017</span></div>
-                  </div>
-                </div>
-                {/* Número y fecha */}
-                <div className="flex border-b border-gray-300">
-                  <div className="flex-1"></div>
-                  <div className="w-1/3 border-l border-gray-300">
-                    <div className="flex border-b border-gray-300">
-                      <div className="flex-1 px-3 py-1.5 bg-gray-50 font-semibold">COTIZACIÓN</div>
-                      <div className="flex-1 px-3 py-1.5 text-red-600 font-bold text-center">{vistaPrevia.numero}</div>
-                    </div>
-                    <div className="flex">
-                      <div className="flex-1 px-3 py-1.5 bg-gray-50 font-semibold">FECHA</div>
-                      <div className="flex-1 px-3 py-1.5 text-center">{vistaPrevia.fecha ? new Date(vistaPrevia.fecha).toLocaleDateString('es-MX') : ''}</div>
-                    </div>
-                  </div>
-                </div>
-                {/* Datos cliente */}
-                <div className="p-4 space-y-1 border-b border-gray-200">
-                  <div className="grid grid-cols-2 gap-2">
-                    <p><strong>Empresa:</strong> {vistaPrevia.empresa}</p>
-                    <p><strong>Oficina:</strong> {vistaPrevia.oficina}</p>
-                    <p><strong>Cliente:</strong> {vistaPrevia.contacto}</p>
-                    <p><strong>Celular:</strong> {vistaPrevia.celular}</p>
-                    <p><strong>Puesto:</strong> {vistaPrevia.puesto}</p>
-                    <p><strong>E-mail:</strong> {vistaPrevia.email}</p>
-                  </div>
-                </div>
-                {/* Tabla precios */}
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-900 text-white">
-                      <th className="text-left px-3 py-2 text-[10px]">ORIGEN-DESTINO</th>
-                      <th className="text-right px-3 py-2 text-[10px]">{vistaPrevia.tipoUnidad?.toUpperCase()}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(vistaPrevia.rutas||[]).filter(r=>r.descripcion).map((r,i)=>(
-                      <tr key={i} className="border-b border-gray-100">
-                        <td className="px-3 py-1.5">{r.descripcion}</td>
-                        <td className="px-3 py-1.5 text-right font-medium">{r.precio?'$'+Number(r.precio).toLocaleString('es-MX',{minimumFractionDigits:2}):''}</td>
-                      </tr>
-                    ))}
-                    {(vistaPrevia.servicios||[]).filter(s=>s.descripcion&&s.precio).length>0 && (
-                      <tr className="bg-gray-50"><td colSpan={2} className="px-3 py-1 text-[10px] font-semibold text-gray-500">SERVICIOS ADICIONALES</td></tr>
-                    )}
-                    {(vistaPrevia.servicios||[]).filter(s=>s.descripcion&&s.precio).map((s,i)=>(
-                      <tr key={i} className="border-b border-gray-100">
-                        <td className="px-3 py-1.5">{s.descripcion}</td>
-                        <td className="px-3 py-1.5 text-right font-medium">${Number(s.precio).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {/* Notas */}
-                <div className="p-4 border-t border-gray-200">
-                  <p className="font-semibold mb-2">NOTA:</p>
-                  <ul className="space-y-1 list-disc list-inside text-gray-600">
-                    {(vistaPrevia.notas||[]).map((n,i)=><li key={i}>{n}</li>)}
-                  </ul>
-                </div>
-                {/* Firma */}
-                <div className="p-4 text-center border-t border-gray-200">
-                  <div className="inline-block border-t border-gray-400 pt-2 px-8 mt-6">
-                    <p className="font-semibold">{vistaPrevia.vendedorNombre}</p>
-                    <p className="text-gray-500">{vistaPrevia.vendedorEmail}</p>
-                  </div>
-                </div>
-                {/* Footer */}
-                <div className="bg-gray-50 px-4 py-2 text-center text-[9px] text-gray-400 border-t border-gray-200">
-                  ARCO VÍAL LAREDO - SALTILLO KM 37.9 LAMAR 3 L6, APODACA, NUEVO LEÓN. | RFC: LLS1407175E6 | TEL: (81) 1941-7135
-                </div>
+            <div className="overflow-y-auto flex-1 p-6 text-xs space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div><span className="text-gray-400">Empresa: </span><strong>{vistaPrevia.empresa}</strong></div>
+                <div><span className="text-gray-400">Contacto: </span><strong>{vistaPrevia.contacto}</strong></div>
+                <div><span className="text-gray-400">Unidad: </span><strong>{vistaPrevia.tipoUnidad}</strong></div>
+                <div><span className="text-gray-400">Fecha: </span><strong>{vistaPrevia.fecha ? new Date(vistaPrevia.fecha).toLocaleDateString('es-MX') : '—'}</strong></div>
               </div>
+              <table className="w-full border-collapse text-xs">
+                <thead><tr className="bg-gray-900 text-white"><th className="text-left px-3 py-2">Ruta</th><th className="text-right px-3 py-2">Precio</th></tr></thead>
+                <tbody>
+                  {(vistaPrevia.rutas||[]).filter(r=>r.descripcion).map((r,i)=>(
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="px-3 py-1.5">{r.descripcion}</td>
+                      <td className="px-3 py-1.5 text-right font-medium">{r.precio?'$'+Number(r.precio).toLocaleString('es-MX'):''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {vistaPrevia.notas?.length > 0 && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="font-medium mb-1">Notas:</p>
+                  {vistaPrevia.notas.map((n,i)=><p key={i} className="text-gray-600">• {n}</p>)}
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal eliminar */}
+      {/* Modal Eliminar */}
       {confirmEliminar && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h2 className="text-base font-semibold text-red-600 mb-1">Eliminar cotización</h2>
+            <h2 className="text-base font-semibold text-red-600 mb-2">Eliminar cotización</h2>
             <p className="text-xs text-gray-500 mb-1">Número: <strong>{confirmEliminar.numero}</strong></p>
             <p className="text-xs text-gray-500 mb-4">Empresa: <strong>{confirmEliminar.empresa}</strong></p>
-            <p className="text-xs text-gray-500 mb-4">Esta acción no se puede deshacer.</p>
             <div className="flex gap-2">
               <button onClick={() => setConfirmEliminar(null)} className="flex-1 btn-secondary text-xs">Cancelar</button>
               <button onClick={eliminarCotizacion} disabled={eliminando} className="flex-1 text-xs bg-red-500 text-white py-2.5 rounded-lg hover:bg-red-600 disabled:opacity-50 font-medium">
@@ -555,12 +485,11 @@ export default function Cotizaciones() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => generarCotizacionPDF(c, { nombre: c.vendedorNombre, email: c.vendedorEmail })}
-                      className="text-xs text-brand hover:underline font-medium"
-                    >
-                      📄 PDF
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setVistaPrevia(c)} className="text-xs text-brand hover:underline font-medium">Ver</button>
+                      <button onClick={() => generarCotizacionPDF(c, { nombre: c.vendedorNombre, email: c.vendedorEmail })} className="text-xs text-gray-500 hover:underline">Imprimir</button>
+                      {(esMaestro || esGerente) && <button onClick={() => setConfirmEliminar(c)} className="text-xs text-red-400 hover:text-red-600">Eliminar</button>}
+                    </div>
                   </td>
                 </tr>
               ))}
