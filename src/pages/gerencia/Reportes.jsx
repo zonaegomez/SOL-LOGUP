@@ -1,10 +1,36 @@
 import { useEffect, useState } from 'react'
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { TrendingUp, TrendingDown, Truck, DollarSign, Users, Star, AlertTriangle, CheckCircle, Clock, BarChart2, Package, Target } from 'lucide-react'
+import { TrendingUp, TrendingDown, Truck, DollarSign, Users, Star, AlertTriangle, CheckCircle, Clock, BarChart2, Package, Target, Download, FileText, Table } from 'lucide-react'
+import * as XLSX from 'xlsx'
 
 const fmt = (n) => '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:0})
 const pct = (a, b) => b ? ((a/b)*100).toFixed(1) + '%' : '0%'
+
+// Exportar a Excel
+function exportarExcel(datos, nombre) {
+  const wb = XLSX.utils.book_new()
+  const ws = XLSX.utils.json_to_sheet(datos)
+  XLSX.utils.book_append_sheet(wb, ws, 'Reporte')
+  XLSX.writeFile(wb, `${nombre}_${new Date().toLocaleDateString('es-MX').replace(/\//g,'-')}.xlsx`)
+}
+
+// Exportar a CSV
+function exportarCSV(datos, nombre) {
+  const headers = Object.keys(datos[0] || {}).join(',')
+  const rows = datos.map(d => Object.values(d).map(v => `"${v}"`).join(',')).join('\n')
+  const csv = `${headers}\n${rows}`
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `${nombre}_${new Date().toLocaleDateString('es-MX').replace(/\//g,'-')}.csv`
+  link.click()
+}
+
+// Imprimir reporte
+function imprimirReporte() {
+  window.print()
+}
 
 const SEMANAS = ['Sem 13','Sem 14','Sem 15','Sem 16','Sem 17','Sem 18']
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
@@ -219,7 +245,7 @@ export default function Reportes() {
           <h1 className="text-xl font-semibold text-gray-900">Reportes y KPIs</h1>
           <p className="text-sm text-gray-400">Panel ejecutivo · Logística Log Up</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
             {['semana','mes','año'].map(p => (
               <button key={p} onClick={()=>setPeriodo(p)}
@@ -227,6 +253,31 @@ export default function Reportes() {
                 {p === 'semana' ? 'Esta semana' : p === 'mes' ? 'Este mes' : 'Este año'}
               </button>
             ))}
+          </div>
+          {/* Botones de exportación */}
+          <div className="flex gap-2">
+            <button onClick={() => exportarExcel([
+              ...viajesSemActual.map(v=>({
+                Folio: v.folio||'', Cliente: v.cliente||'', Origen: v.origen||'', Destino: v.destino||'',
+                Dia: v.diaSemana||'', Servicio: v.tipoServicio||'', Ingreso: v.ingresoMXN||0, Estatus: v.estatus||''
+              }))
+            ], `Viajes_Semana${semanaActual}`)}
+              className="btn-secondary text-xs py-1.5 flex items-center gap-1.5">
+              <Table className="w-3.5 h-3.5" /> Excel
+            </button>
+            <button onClick={() => exportarCSV([
+              ...viajesSemActual.map(v=>({
+                Folio: v.folio||'', Cliente: v.cliente||'', Origen: v.origen||'',
+                Destino: v.destino||'', Dia: v.diaSemana||'', Ingreso: v.ingresoMXN||0, Estatus: v.estatus||''
+              }))
+            ], `Viajes_Semana${semanaActual}`)}
+              className="btn-secondary text-xs py-1.5 flex items-center gap-1.5">
+              <Download className="w-3.5 h-3.5" /> CSV
+            </button>
+            <button onClick={imprimirReporte}
+              className="btn-secondary text-xs py-1.5 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" /> Imprimir
+            </button>
           </div>
         </div>
       </div>
@@ -380,8 +431,23 @@ export default function Reportes() {
 
           {/* Tabla de viajes por día */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
               <p className="text-sm font-semibold text-gray-700">Detalle por día — Semana {semanaActual}</p>
+              <button onClick={() => exportarExcel(
+                ['Viernes','Sábado','Domingo','Lunes','Martes','Miércoles','Jueves'].map(dia => {
+                  const dViajes = viajesSemActual.filter(v=>v.diaSemana===dia)
+                  const dEfect = dViajes.filter(v=>['Entregado','En tránsito'].includes(v.estatus))
+                  return {
+                    Dia: dia,
+                    Viajes: dEfect.length,
+                    Ingresos: dEfect.reduce((s,v)=>s+(Number(v.ingresoMXN)||0),0),
+                    Cancelados: dViajes.filter(v=>v.estatus==='Cancelado').length,
+                    Promedio: dEfect.length ? Math.round(dEfect.reduce((s,v)=>s+(Number(v.ingresoMXN)||0),0)/dEfect.length) : 0
+                  }
+                }), `Detalle_Semana${semanaActual}`
+              )} className="btn-secondary text-xs py-1 flex items-center gap-1">
+                <Download className="w-3 h-3" /> Exportar
+              </button>
             </div>
             <table className="w-full text-xs">
               <thead className="bg-gray-50 text-[10px] text-gray-500 uppercase">
@@ -515,8 +581,20 @@ export default function Reportes() {
 
           {/* Tabla de proveedores con KPIs */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
               <p className="text-sm font-semibold text-gray-700">Detalle por proveedor</p>
+              <button onClick={() => exportarExcel(
+                proveedores.map(p => ({
+                  Proveedor: p.nombre||'',
+                  Calificacion: p.calificacion||0,
+                  Viajes: p.kpis?.viajes||0,
+                  Puntualidad: `${p.kpis?.puntualidad||0}%`,
+                  Documentos: Object.values(p.documentos||{}).filter(Boolean).length,
+                  Estado: p.activo!==false?'Activo':'Inactivo'
+                })), 'Proveedores_KPIs'
+              )} className="btn-secondary text-xs py-1 flex items-center gap-1">
+                <Download className="w-3 h-3" /> Exportar
+              </button>
             </div>
             <table className="w-full text-xs">
               <thead className="bg-gray-50 text-[10px] text-gray-500 uppercase">
