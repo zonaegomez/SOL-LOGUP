@@ -3,24 +3,20 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 const MonedaContext = createContext(null)
 
 const TC_DEFAULT = 17.50
-// Serie de BANXICO: SF43718 = Tipo de cambio FIX (pesos por dólar)
-const BANXICO_TOKEN = 'ce9a24ac892b3e9f6e4ec8a6bc00e2bc00c1c6b0' 
-const BANXICO_SERIE = 'SF43718'
 
 async function fetchTCBanxico() {
   try {
-    const hoy = new Date().toISOString().slice(0,10)
-    const hace7 = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10)
-    const url = `https://www.banxico.org.mx/SieAPIRest/service/v1/series/${BANXICO_SERIE}/datos/${hace7}/${hoy}?token=${BANXICO_TOKEN}`
-    const resp = await fetch(url, { headers: { 'Bmx-Token': BANXICO_TOKEN } })
+    // Opción 1: exchangerate-api (sin CORS, gratuita)
+    const resp = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
     const data = await resp.json()
-    const datos = data?.bmx?.series?.[0]?.datos
-    if (datos?.length) {
-      // Tomar el más reciente que no sea N/E
-      const valido = [...datos].reverse().find(d => d.dato !== 'N/E')
-      if (valido) return parseFloat(valido.dato)
-    }
-  } catch(e) { console.error('BANXICO error:', e) }
+    if (data?.rates?.MXN) return parseFloat(data.rates.MXN.toFixed(4))
+  } catch(e) {}
+  try {
+    // Opción 2: fixer.io alternativo sin key
+    const resp = await fetch('https://open.er-api.com/v6/latest/USD')
+    const data = await resp.json()
+    if (data?.rates?.MXN) return parseFloat(data.rates.MXN.toFixed(4))
+  } catch(e) { console.error('TC fetch error:', e) }
   return null
 }
 
