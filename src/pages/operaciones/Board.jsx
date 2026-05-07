@@ -120,8 +120,8 @@ function generarCartaPDF(em) {
 <body>
 <div class="header">
   <div>
-    <div class="logo">LOG<span>UP</span></div>
-    <div style="font-size:10px;color:#666;margin-top:2px;">Sistema Operativo Logístico · Log Up</div>
+    <img src="${window.location.origin}/logupcompleto.png" style="height:50px;object-fit:contain;" onerror="this.style.display='none'" />
+    <div style="font-size:10px;color:#666;margin-top:4px;">Sistema Operativo Logístico · Log Up</div>
     <div style="font-size:9px;color:#aaa;margin-top:1px;">Generado: ${new Date().toLocaleString('es-MX')}</div>
   </div>
   <div class="folio">
