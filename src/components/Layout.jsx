@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useState, useEffect } from 'react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { useMoneda } from '../context/MonedaContext'
-import { LayoutDashboard, Truck, FileText, ClipboardList, DollarSign, Users, Building2, FolderOpen, Upload, CheckSquare, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, Truck, FileText, ClipboardList, DollarSign, Users, Building2, FolderOpen, Upload, CheckSquare, BarChart2, Database } from 'lucide-react'
 
 const NAV = [
   { label: 'Dashboard',        Icon: LayoutDashboard, path: '/dashboard',                roles: ['admin','ventas','operaciones','pricing','gerente','maestro'] },
@@ -21,6 +21,7 @@ const NAV = [
   { label: 'Clientes',         Icon: Building2,       path: '/admin/clientes',           roles: ['admin','maestro'] },
   { label: 'Catálogos',        Icon: FolderOpen,      path: '/admin/catalogos',          roles: ['admin','maestro'] },
   { label: 'Importar maestro', Icon: Upload,          path: '/admin/importar',           roles: ['admin','maestro'] },
+  { label: 'Gestión de datos',  Icon: Database,        path: '/admin/datos',              roles: ['maestro'] },
 ]
 
 export default function Layout() {
