@@ -563,15 +563,27 @@ export default function Reportes() {
               <p className="text-sm font-semibold text-gray-700">Ingresos por semana (últimas 6)</p>
               <p className="text-xs text-gray-400">Vi → Ju</p>
             </div>
-            <div className="h-32">
-              <LineChart data={ingresosPorSemana} height={100} color="#1A56DB" />
-            </div>
-            <div className="flex justify-between mt-2">
-              {ingresosPorSemana.map((s,i) => (
-                <div key={i} className="text-center">
-                  <p className="text-[10px] font-bold text-gray-700">{s.value>0?fmt(s.value):'—'}</p>
-                </div>
-              ))}
+            {/* Gráfica de barras proporcional */}
+            <div className="flex items-end gap-3 h-40 px-2">
+              {ingresosPorSemana.map((s, i) => {
+                const maxVal = Math.max(...ingresosPorSemana.map(x => x.value), 1)
+                const pct = maxVal > 0 ? (s.value / maxVal) * 100 : 0
+                const esSemActual = i === ingresosPorSemana.length - 1
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <p className="text-[9px] font-bold text-gray-600 text-center leading-tight">
+                      {s.value > 0 ? fmt(s.value) : '—'}
+                    </p>
+                    <div className="w-full flex items-end justify-center" style={{height: '100px'}}>
+                      <div
+                        className={`w-full rounded-t-lg transition-all ${esSemActual ? 'bg-brand' : 'bg-blue-200'}`}
+                        style={{ height: `${Math.max(pct, s.value > 0 ? 4 : 0)}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-400 font-medium">{s.label}</p>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
