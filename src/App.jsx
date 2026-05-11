@@ -11,6 +11,7 @@ import Usuarios from './pages/admin/Usuarios'
 import Catalogos from './pages/admin/Catalogos'
 import Clientes from './pages/admin/Clientes'
 import ImportarMaestro from './pages/admin/ImportarMaestro'
+import GestionDatos from './pages/admin/GestionDatos'
 import Autorizaciones from './pages/gerencia/Autorizaciones'
 import Reportes from './pages/gerencia/Reportes'
 import Board from './pages/operaciones/Board'
@@ -37,6 +38,7 @@ export default function App() {
               <Route path="/admin/catalogos" element={<Catalogos />} />
               <Route path="/admin/clientes" element={<Clientes />} />
               <Route path="/admin/importar" element={<ImportarMaestro />} />
+              <Route path="/admin/datos" element={<GestionDatos />} />
               <Route path="/gerencia/autorizaciones" element={<Autorizaciones />} />
               <Route path="/gerencia/reportes" element={<Reportes />} />
             </Route>
