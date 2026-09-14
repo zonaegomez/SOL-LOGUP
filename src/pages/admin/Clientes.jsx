@@ -26,7 +26,17 @@ export default function Clientes() {
   }
   const [form, setForm] = useState(FORM_VACIO)
 
-  useEffect(() => { fetchClientes() }, [])
+  const [usuarios, setUsuarios] = useState([])
+
+  useEffect(() => {
+    fetchClientes()
+    // Cargar usuarios para asignación
+    import('firebase/firestore').then(({ getDocs, collection }) => {
+      getDocs(collection(db, 'usuarios')).then(snap => {
+        setUsuarios(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.activo))
+      })
+    })
+  }, [])
 
   const fetchClientes = async () => {
     setLoading(true)
@@ -208,6 +218,48 @@ export default function Clientes() {
             className="text-xs text-brand hover:underline">+ Agregar ruta</button>
         </div>
 
+        {/* Asignación */}
+        <div className="card p-5 space-y-3">
+          <div className="border-b border-gray-100 pb-2">
+            <p className="text-sm font-semibold text-gray-700">Asignación de cuenta</p>
+            <p className="text-xs text-gray-400 mt-0.5">Solo los usuarios asignados verán los embarques de este cliente</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Vendedor responsable</label>
+              <select className="input" value={form.vendedorId} onChange={e => {
+                const u = usuarios.find(x => x.id === e.target.value)
+                set('vendedorId', e.target.value)
+                set('vendedorNombre', u?.nombre || '')
+              }}>
+                <option value="">Sin asignar</option>
+                {usuarios.filter(u => u.rol === 'ventas').map(u => (
+                  <option key={u.id} value={u.id}>{u.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Operativo responsable</label>
+              <select className="input" value={form.operativoId} onChange={e => {
+                const u = usuarios.find(x => x.id === e.target.value)
+                set('operativoId', e.target.value)
+                set('operativoNombre', u?.nombre || '')
+              }}>
+                <option value="">Sin asignar</option>
+                {usuarios.filter(u => u.rol === 'operaciones').map(u => (
+                  <option key={u.id} value={u.id}>{u.nombre}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {(form.vendedorNombre || form.operativoNombre) && (
+            <div className="bg-blue-50 rounded-xl px-4 py-2 flex gap-4 text-xs">
+              {form.vendedorNombre && <span className="text-brand">Vendedor: <strong>{form.vendedorNombre}</strong></span>}
+              {form.operativoNombre && <span className="text-brand">Operativo: <strong>{form.operativoNombre}</strong></span>}
+            </div>
+          )}
+        </div>
+
         {/* Notas */}
         <div className="card p-5">
           <p className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2 mb-3">Notas internas</p>
@@ -259,7 +311,7 @@ export default function Clientes() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
               <tr>
-                {['Cliente','RFC','Contacto','Rutas pactadas','Crédito','Estado',''].map(h=>(
+                {['Cliente','RFC','Contacto','Vendedor','Operativo','Estado',''].map(h=>(
                   <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
                 ))}
               </tr>
@@ -280,16 +332,15 @@ export default function Clientes() {
                     <p>{c.contactoNombre || '—'}</p>
                     {c.contactoTel && <p className="text-[10px] text-gray-400">{c.contactoTel}</p>}
                   </td>
-                  <td className="px-4 py-3">
-                    {(c.rutasPactadas||[]).filter(r=>r.origen).slice(0,2).map((r,i)=>(
-                      <div key={i} className="text-[10px] text-gray-600">{r.origen} → {r.destino} <span className="text-gray-400">{r.tipoServicio}</span></div>
-                    ))}
-                    {(c.rutasPactadas||[]).filter(r=>r.origen).length > 2 && (
-                      <div className="text-[10px] text-gray-400">+{(c.rutasPactadas||[]).filter(r=>r.origen).length-2} más</div>
-                    )}
+                  <td className="px-4 py-3 text-xs">
+                    {c.vendedorNombre
+                      ? <span className="bg-blue-50 text-brand px-2 py-0.5 rounded-full text-[10px] font-medium">{c.vendedorNombre}</span>
+                      : <span className="text-gray-300 text-[10px]">Sin asignar</span>}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-600">
-                    {c.creditoDias ? `${c.creditoDias} días` : '—'}
+                  <td className="px-4 py-3 text-xs">
+                    {c.operativoNombre
+                      ? <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-medium">{c.operativoNombre}</span>
+                      : <span className="text-gray-300 text-[10px]">Sin asignar</span>}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.activo?'bg-green-50 text-green-700':'bg-gray-100 text-gray-500'}`}>
@@ -308,4 +359,3 @@ export default function Clientes() {
     </div>
   )
 }
-
